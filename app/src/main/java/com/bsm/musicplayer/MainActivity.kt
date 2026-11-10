@@ -30,6 +30,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -635,10 +636,16 @@ private fun BsmMusicApp(
             AnimatedContent(
                 targetState = librarySection,
                 transitionSpec = {
-                    (fadeIn(animationSpec = tween(280)) +
-                        slideInHorizontally(animationSpec = tween(320)) { fullWidth -> fullWidth / 7 }) togetherWith
-                        (fadeOut(animationSpec = tween(180)) +
-                            slideOutHorizontally(animationSpec = tween(260)) { fullWidth -> -fullWidth / 10 })
+                    val sections = listOf("SONGS", "ARTISTS", "PLAYLIST", "ALBUMS", "RECENT")
+                    val movingForward = sections.indexOf(targetState) >= sections.indexOf(initialState)
+                    (fadeIn(animationSpec = tween(300)) +
+                        slideInHorizontally(animationSpec = tween(340)) { width ->
+                            if (movingForward) width / 5 else -width / 5
+                        }) togetherWith
+                        (fadeOut(animationSpec = tween(210)) +
+                            slideOutHorizontally(animationSpec = tween(300)) { width ->
+                                if (movingForward) -width / 7 else width / 7
+                            })
                 },
                 label = "libraryTabTransition",
                 modifier = Modifier.fillMaxWidth().weight(1f)
@@ -758,6 +765,7 @@ private fun BsmMusicApp(
                             items(playlistNames) { name ->
                                 Row(
                                     Modifier.fillMaxWidth()
+                                        .animateContentSize(tween(240))
                                         .clip(RoundedCornerShape(16.dp))
                                         .background(SurfaceDark)
                                         .clickable {
@@ -795,7 +803,7 @@ private fun BsmMusicApp(
                             artistRow.forEach { artist ->
                                 val artistSongs = visibleSongs.filter { it.artist == artist }
                                 Column(
-                                    Modifier.weight(1f).background(SurfaceDark, RoundedCornerShape(18.dp))
+                                    Modifier.weight(1f).animateContentSize(tween(220)).background(SurfaceDark, RoundedCornerShape(18.dp))
                                         .clickable { selectedArtist = artist }.padding(11.dp)
                                 ) {
                                     AlbumArtwork(artistSongs.first(), Modifier.fillMaxWidth().height(104.dp).animateContentSize(tween(180)))
@@ -1020,7 +1028,7 @@ private fun BsmMusicApp(
             val miniProgress = if (miniDuration > 0L) (playbackPosition.toFloat() / miniDuration.toFloat()).coerceIn(0f, 1f) else 0f
             Row(
                 Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 5.dp)
-                    .height(54.dp).clip(RoundedCornerShape(15.dp))
+                    .height(54.dp).animateContentSize(tween(240)).clip(RoundedCornerShape(15.dp))
                     .background(Brush.linearGradient(listOf(SurfaceRaised, SurfaceDark)))
                     .clickable { if (currentSong != null) showPlayer = true }
                     .padding(start = 9.dp, end = 5.dp),
@@ -1033,11 +1041,17 @@ private fun BsmMusicApp(
                         Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(20.dp))
                     }
                 }
-                Text(
-                    currentSong?.title ?: "Nothing playing",
-                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    maxLines = 1, modifier = Modifier.weight(1f).padding(start = 9.dp, end = 5.dp)
-                )
+                AnimatedContent(
+                    targetState = currentSong?.title ?: "Nothing playing",
+                    transitionSpec = {
+                        (fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 3 }) togetherWith
+                            (fadeOut(tween(120)) + slideOutVertically(tween(180)) { -it / 4 })
+                    },
+                    label = "miniPlayerTitle",
+                    modifier = Modifier.weight(1f).padding(start = 9.dp, end = 5.dp)
+                ) { title ->
+                    Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
                 IconButton(onClick = { player.seekToPreviousMediaItem() }, enabled = currentSong != null, modifier = Modifier.size(34.dp)) {
                     Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = if (currentSong != null) Muted else Muted.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
                 }
@@ -1056,6 +1070,16 @@ private fun BsmMusicApp(
             ) {
                 listOf("SONGS", "ARTISTS", "PLAYLIST", "ALBUMS", "RECENT").forEach { section ->
                     val selected = librarySection == section
+                    val tabBackground by animateColorAsState(
+                        targetValue = if (selected) AccentDeep else Color.Transparent,
+                        animationSpec = tween(220),
+                        label = "tabBackground"
+                    )
+                    val tabIconScale by animateFloatAsState(
+                        targetValue = if (selected) 1.12f else 1f,
+                        animationSpec = tween(220),
+                        label = "tabIconScale"
+                    )
                     val tabIcon = when (section) {
                         "SONGS" -> Icons.Default.MusicNote
                         "ARTISTS" -> Icons.Default.Person
@@ -1065,7 +1089,7 @@ private fun BsmMusicApp(
                     }
                     Column(
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(13.dp))
-                            .background(if (selected) AccentDeep else Color.Transparent)
+                            .background(tabBackground)
                             .clickable {
                                 librarySection = section
                                 selectedArtist = null
@@ -1079,7 +1103,10 @@ private fun BsmMusicApp(
                             tabIcon,
                             contentDescription = section,
                             tint = if (selected) Accent else Muted,
-                            modifier = Modifier.size(17.dp)
+                            modifier = Modifier.size(17.dp).graphicsLayer {
+                                scaleX = tabIconScale
+                                scaleY = tabIconScale
+                            }
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
@@ -1096,8 +1123,8 @@ private fun BsmMusicApp(
         }
         AnimatedVisibility(
             visible = showPlayer && currentSong != null,
-            enter = fadeIn(tween(210)) + slideInVertically(initialOffsetY = { it / 5 }, animationSpec = tween(240)),
-            exit = fadeOut(tween(160)) + slideOutVertically(targetOffsetY = { it / 5 }, animationSpec = tween(180))
+            enter = fadeIn(tween(280)) + slideInVertically(initialOffsetY = { it }, animationSpec = tween(360)),
+            exit = fadeOut(tween(190)) + slideOutVertically(targetOffsetY = { it / 3 }, animationSpec = tween(260))
         ) {
             currentSong?.let { activeSong ->
                 PlayerScreen(song = activeSong, player = player, isFavorite = activeSong.id in favoriteIds, onToggleFavorite = { toggleFavorite(activeSong) }, onAddToPlaylist = { songForPlaylist = activeSong }, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true }, sleepTimerMinutes = sleepTimerMinutes, sleepTimerRemaining = sleepTimerRemaining, onSetSleepTimer = { sleepTimerMinutes = it })
