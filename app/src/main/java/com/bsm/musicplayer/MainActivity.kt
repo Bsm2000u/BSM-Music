@@ -336,14 +336,28 @@ private fun BsmMusicApp(
         player.addMediaItem(MediaItem.fromUri(song.uri))
     }
 
-    val onSongClick: (Song) -> Unit = remember(player, songIndexById) {
+    val onSongClick: (Song) -> Unit = remember(player, songs, visibleSongs) {
         { song ->
-            currentSong = song
-            player.seekTo(songIndexById[song.id] ?: 0, 0L)
-            if (player.playbackState == Player.STATE_IDLE) player.prepare()
+            val activeSongs = visibleSongs.ifEmpty { songs }
+            val activeIndex = activeSongs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+            player.setMediaItems(activeSongs.map { MediaItem.fromUri(it.uri) })
+            player.shuffleModeEnabled = false
+            player.seekTo(activeIndex, 0L)
+            player.prepare()
             player.play()
+            currentSong = song
             showPlayer = true
         }
+    }
+
+    fun playCollection(collection: List<Song>, shuffle: Boolean) {
+        if (collection.isEmpty()) return
+        player.shuffleModeEnabled = shuffle
+        player.setMediaItems(collection.map { MediaItem.fromUri(it.uri) })
+        player.prepare()
+        player.play()
+        currentSong = collection.first()
+        showPlayer = true
     }
 
     LaunchedEffect(mediaItems) {
@@ -446,7 +460,15 @@ private fun BsmMusicApp(
                     )
                 }
                 if (selectedArtist != null || selectedAlbum != null) {
-                    TextButton(onClick = { selectedArtist = null; selectedAlbum = null; librarySection = "SONGS" }) { Text("BACK", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    TextButton(onClick = {
+                        if (selectedAlbum != null && selectedArtist != null) {
+                            selectedAlbum = null
+                        } else {
+                            selectedArtist = null
+                            selectedAlbum = null
+                            librarySection = "SONGS"
+                        }
+                    }) { Text("BACK", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                 } else if (librarySection == "SONGS") {
                     TextButton(onClick = { sortByArtist = !sortByArtist }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
                         Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -646,6 +668,104 @@ private fun BsmMusicApp(
                     }
                 }
             } else {
+                val detailAlbumSong = selectedAlbum?.let { albumId -> visibleSongs.firstOrNull { it.albumId == albumId } }
+                if (selectedArtist != null || detailAlbumSong != null) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .background(
+                                Brush.linearGradient(listOf(AccentDeep, SurfaceDark)),
+                                RoundedCornerShape(22.dp)
+                            )
+                            .padding(15.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (detailAlbumSong != null) {
+                                AlbumArtwork(detailAlbumSong, Modifier.size(82.dp))
+                            } else {
+                                Box(
+                                    Modifier.size(82.dp).background(SurfaceRaised, RoundedCornerShape(18.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Person, null, tint = Accent, modifier = Modifier.size(42.dp))
+                                }
+                            }
+                            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                                Text(
+                                    if (detailAlbumSong != null) "ALBUM" else "ARTIST",
+                                    color = Accent,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.7.sp
+                                )
+                                Spacer(Modifier.height(5.dp))
+                                Text(
+                                    detailAlbumSong?.album ?: selectedArtist.orEmpty(),
+                                    color = Color.White,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 2
+                                )
+                                Text(
+                                    if (detailAlbumSong != null) detailAlbumSong.artist else "${visibleSongs.size} songs · ${visibleSongs.map { it.albumId }.distinct().size} albums",
+                                    color = Muted,
+                                    fontSize = 11.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Button(
+                                onClick = { playCollection(visibleSongs, false) },
+                                enabled = visibleSongs.isNotEmpty(),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(13.dp),
+                                contentPadding = PaddingValues(vertical = 10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("PLAY ALL", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                            OutlinedButton(
+                                onClick = { playCollection(visibleSongs, true) },
+                                enabled = visibleSongs.isNotEmpty(),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(13.dp),
+                                contentPadding = PaddingValues(vertical = 10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Accent.copy(alpha = 0.65f))
+                            ) {
+                                Icon(Icons.Default.Shuffle, null, tint = Accent, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("SHUFFLE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+                        if (selectedArtist != null && selectedAlbum == null) {
+                            val artistAlbums = visibleSongs.distinctBy { it.albumId }.sortedBy { it.album.lowercase() }
+                            if (artistAlbums.isNotEmpty()) {
+                                Spacer(Modifier.height(15.dp))
+                                Text("ALBUMS BY THIS ARTIST", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    artistAlbums.forEach { albumSong ->
+                                        Column(
+                                            Modifier.width(104.dp).clickable { selectedAlbum = albumSong.albumId }
+                                        ) {
+                                            AlbumArtwork(albumSong, Modifier.fillMaxWidth().height(88.dp))
+                                            Spacer(Modifier.height(5.dp))
+                                            Text(albumSong.album, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                            Text("${visibleSongs.count { it.albumId == albumSong.albumId }} tracks", color = Muted, fontSize = 9.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 val songListState = rememberLazyListState()
                 LazyColumn(state = songListState, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
                     items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
