@@ -675,17 +675,66 @@ private fun BsmMusicApp(
                 onDismissRequest = { songForPlaylist = null },
                 title = { Text("Add to playlist") },
                 text = {
-                    Column {
-                        if (playlistNames.isEmpty()) Text("Create a playlist first.", color = Muted)
-                        playlistNames.forEach { name ->
-                            TextButton(onClick = {
-                                savePlaylistSongIds(name, playlistSongIds(name) + song.id)
-                                songForPlaylist = null
-                                selectedPlaylist = name
-                                showFavoritesOnly = false
-                            }) { Text(name, color = Color.White) }
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (playlistNames.isEmpty()) {
+                            Text(
+                                "No playlists yet. Create one to organize your music.",
+                                color = Muted,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
                         }
-                        TextButton(onClick = { newPlaylistName = ""; showCreatePlaylist = true }) { Text("+ Create new playlist", color = Accent) }
+                        playlistNames.forEach { name ->
+                            val alreadyAdded = song.id in playlistSongIds(name)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(SurfaceRaised, RoundedCornerShape(14.dp))
+                                    .clickable {
+                                        if (!alreadyAdded) {
+                                            savePlaylistSongIds(name, playlistSongIds(name) + song.id)
+                                        }
+                                        songForPlaylist = null
+                                        selectedPlaylist = name
+                                        showFavoritesOnly = false
+                                    }
+                                    .padding(horizontal = 13.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        name,
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        "${playlistSongCounts[name] ?: 0} songs",
+                                        color = Muted,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                                Text(
+                                    if (alreadyAdded) "ADDED" else "ADD",
+                                    color = if (alreadyAdded) Muted else Accent,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.7.sp
+                                )
+                            }
+                        }
+                        TextButton(
+                            onClick = { newPlaylistName = ""; showCreatePlaylist = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("+ CREATE NEW PLAYLIST", color = Accent, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 confirmButton = { TextButton(onClick = { songForPlaylist = null }) { Text("DONE", color = Accent) } },
