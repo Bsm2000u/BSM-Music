@@ -481,6 +481,27 @@ private fun BsmMusicApp(
                     )
                 )
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("SONGS", "ARTISTS", "ALBUMS").forEach { section ->
+                    FilterChip(
+                        selected = librarySection == section,
+                        onClick = { librarySection = section; selectedArtist = null; selectedAlbum = null },
+                        label = { Text(section, fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AccentDeep,
+                            selectedLabelColor = Color.White,
+                            labelColor = Muted
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true, selected = librarySection == section,
+                            borderColor = SurfaceRaised, selectedBorderColor = Accent
+                        )
+                    )
+                }
+            }
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("PLAYLISTS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
                 if (playlistNames.isNotEmpty()) {
@@ -572,6 +593,47 @@ private fun BsmMusicApp(
                             ) {
                                 Text("BROWSE LIBRARY", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
                             }
+                        }
+                    }
+                }
+            } else if (selectedArtist == null && selectedAlbum == null && librarySection == "ARTISTS") {
+                val artists = visibleSongs.map { it.artist }.distinct().sortedBy { it.lowercase() }
+                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
+                    items(artists, key = { it }) { artist ->
+                        val artistSongs = visibleSongs.filter { it.artist == artist }
+                        Row(
+                            Modifier.fillMaxWidth().background(SurfaceDark, RoundedCornerShape(16.dp))
+                                .clickable { selectedArtist = artist }.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(Modifier.size(52.dp).background(AccentDeep, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Person, null, tint = Accent, modifier = Modifier.size(27.dp))
+                            }
+                            Column(Modifier.weight(1f).padding(start = 13.dp)) {
+                                Text(artist, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text("${artistSongs.size} songs", color = Muted, fontSize = 11.sp)
+                            }
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = Muted)
+                        }
+                    }
+                }
+            } else if (selectedArtist == null && selectedAlbum == null && librarySection == "ALBUMS") {
+                val albums = visibleSongs.distinctBy { it.albumId }.sortedBy { it.album.lowercase() }
+                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
+                    items(albums, key = { it.albumId }) { albumSong ->
+                        val albumSongs = visibleSongs.filter { it.albumId == albumSong.albumId }
+                        Row(
+                            Modifier.fillMaxWidth().background(SurfaceDark, RoundedCornerShape(16.dp))
+                                .clickable { selectedAlbum = albumSong.albumId }.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AlbumArtwork(albumSong, Modifier.size(58.dp))
+                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text(albumSong.album, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text(albumSong.artist, color = Muted, fontSize = 11.sp, maxLines = 1)
+                                Text("${albumSongs.size} songs", color = Accent, fontSize = 10.sp)
+                            }
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = Muted)
                         }
                     }
                 }
