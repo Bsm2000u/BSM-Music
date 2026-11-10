@@ -48,6 +48,9 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val Background = Color(0xFF101311)
 private val SurfaceDark = Color(0xFF1A201C)
@@ -183,6 +186,15 @@ private fun BsmMusicApp(
     var showPlayer by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var sortByArtist by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun refreshLibrary() {
+        scope.launch {
+            isRefreshing = true
+            try { songs = withContext(Dispatchers.IO) { loadSongs() } }
+            finally { isRefreshing = false }
+        }
+    }
     val visibleSongs = remember(songs, searchQuery, sortByArtist) {
         songs.filter { it.title.contains(searchQuery, true) || it.artist.contains(searchQuery, true) }
             .let { list -> if (sortByArtist) list.sortedBy { it.artist.lowercase() } else list.sortedBy { it.title.lowercase() } }
@@ -201,7 +213,11 @@ private fun BsmMusicApp(
     }
 
     LaunchedEffect(permissionGranted) {
-        if (permissionGranted) songs = loadSongs()
+        if (permissionGranted) {
+            isRefreshing = true
+            try { songs = withContext(Dispatchers.IO) { loadSongs() } }
+            finally { isRefreshing = false }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
@@ -231,7 +247,7 @@ private fun BsmMusicApp(
                 TextButton(onClick = { sortByArtist = !sortByArtist }) {
                     Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp)
                 }
-                IconButton(onClick = { songs = loadSongs() }) {
+                IconButton(onClick = { refreshLibrary() }) {
                     Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
                 }
             }
@@ -279,7 +295,7 @@ private fun BsmMusicApp(
                     Spacer(Modifier.height(8.dp))
                     Text("No music files found on this device.", color = Muted)
                     Spacer(Modifier.height(16.dp))
-                    TextButton(onClick = { songs = loadSongs() }) { Text("Refresh library") }
+                    TextButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) { Text(if (isRefreshing) "Refreshing…" else "Refresh library") }
                 }
             } else {
                 LazyColumn(
