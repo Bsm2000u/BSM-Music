@@ -26,6 +26,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -41,6 +47,8 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Queue
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -305,6 +313,9 @@ private fun BsmMusicApp(
         val insertAt = if (player.currentMediaItemIndex >= 0) player.currentMediaItemIndex + 1 else 0
         player.addMediaItem(insertAt.coerceAtMost(player.mediaItemCount), MediaItem.fromUri(song.uri))
     }
+    fun addSongToQueueEnd(song: Song) {
+        player.addMediaItem(MediaItem.fromUri(song.uri))
+    }
 
     val onSongClick: (Song) -> Unit = remember(player, songIndexById) {
         { song ->
@@ -552,7 +563,8 @@ private fun BsmMusicApp(
                             onSongClick = onSongClick,
                             onToggleFavorite = { toggleFavorite(song) },
                             onAddToPlaylist = { songForPlaylist = song },
-                            onAddToQueue = { addSongToQueueNext(song) }
+                            onAddToQueue = { addSongToQueueNext(song) },
+                            onAddToQueueEnd = { addSongToQueueEnd(song) }
                         )
                     }
                 }
@@ -577,7 +589,13 @@ private fun BsmMusicApp(
                 title = {
                     Column {
                         Text("PLAYING QUEUE", color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("${queueTracks.size} tracks · Up next", color = Muted, fontSize = 11.sp)
+                        Text("${queueTracks.size} tracks · Drag to reorder", color = Muted, fontSize = 11.sp)
+                        if (queueTracks.size > queueCurrentIndex + 1 && queueCurrentIndex >= 0) {
+                            TextButton(
+                                onClick = { player.removeMediaItems(queueCurrentIndex + 1, player.mediaItemCount) },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp)
+                            ) { Text("CLEAR UPCOMING", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        }
                     }
                 },
                 text = {
@@ -590,8 +608,30 @@ private fun BsmMusicApp(
                         }
                         queueTracks.forEach { (mediaIndex, queuedSong) ->
                             val isCurrent = mediaIndex == queueCurrentIndex
+                            var dragOffset by remember(mediaIndex) { mutableFloatStateOf(0f) }
                             Row(
                                 modifier = Modifier.fillMaxWidth()
+                                    .graphicsLayer { translationY = dragOffset }
+                                    .zIndex(if (dragOffset != 0f) 1f else 0f)
+                                    .pointerInput(mediaIndex, queueCurrentIndex, queueTracks.size) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragEnd = {
+                                                val steps = (dragOffset / (64.dp.toPx())).roundToInt()
+                                                val target = (mediaIndex + steps).coerceIn((queueCurrentIndex + 1).coerceAtLeast(0), (player.mediaItemCount - 1).coerceAtLeast(0))
+                                                if (!isCurrent && target != mediaIndex && mediaIndex > queueCurrentIndex) {
+                                                    player.moveMediaItem(mediaIndex, target)
+                                                }
+                                                dragOffset = 0f
+                                            },
+                                            onDragCancel = { dragOffset = 0f },
+                                            onDrag = { change, amount ->
+                                                if (!isCurrent && mediaIndex > queueCurrentIndex) {
+                                                    dragOffset += amount.y
+                                                    change.consume()
+                                                }
+                                            }
+                                        )
+                                    }
                                     .background(if (isCurrent) AccentDeep else SurfaceRaised, RoundedCornerShape(12.dp))
                                     .clickable {
                                         player.seekTo(mediaIndex, 0L)
@@ -603,6 +643,7 @@ private fun BsmMusicApp(
                                     .padding(start = 11.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Icon(Icons.Default.DragHandle, contentDescription = if (isCurrent) "Current track" else "Drag to reorder", tint = if (isCurrent) Accent else Muted, modifier = Modifier.size(18.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(queuedSong.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                                     Text(if (isCurrent) "NOW PLAYING · ${queuedSong.artist}" else queuedSong.artist, color = if (isCurrent) Accent else Muted, fontSize = 10.sp, maxLines = 1)
@@ -824,7 +865,8 @@ private fun SongRow(
     onSongClick: (Song) -> Unit,
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
-    onAddToQueue: () -> Unit
+    onAddToQueue: () -> Unit,
+    onAddToQueueEnd: () -> Unit
 ) {
     val onClick = remember(song, onSongClick) { { onSongClick(song) } }
     Row(
@@ -848,6 +890,9 @@ private fun SongRow(
         Text(formatTime(song.duration), color = Muted, fontSize = 11.sp)
         IconButton(onClick = onAddToQueue, modifier = Modifier.size(38.dp)) {
             Icon(Icons.Default.QueueMusic, contentDescription = "Play next", tint = Muted, modifier = Modifier.size(19.dp))
+        }
+        IconButton(onClick = onAddToQueueEnd, modifier = Modifier.size(38.dp)) {
+            Icon(Icons.Default.Queue, contentDescription = "Add to queue", tint = Muted, modifier = Modifier.size(19.dp))
         }
         IconButton(onClick = onAddToPlaylist, modifier = Modifier.size(38.dp)) {
             Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to playlist", tint = Muted, modifier = Modifier.size(19.dp))
