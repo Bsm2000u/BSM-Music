@@ -47,6 +47,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -108,6 +110,22 @@ private val Accent = Color(0xFFFF3048)
 private val Muted = Color(0xFF9698A2)
 private val AccentDeep = Color(0xFF351018)
 private val SurfaceRaised = Color(0xFF1D1E25)
+
+@Composable
+private fun rememberPressFeedback(): Pair<MutableInteractionSource, Modifier> {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.975f else 1f,
+        animationSpec = tween(durationMillis = if (isPressed) 85 else 155),
+        label = "pressFeedback"
+    )
+    val pressModifier = Modifier.graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
+    return interactionSource to pressModifier
+}
 
 @androidx.compose.runtime.Immutable
 data class Song(
@@ -763,12 +781,13 @@ private fun BsmMusicApp(
                             contentPadding = PaddingValues(bottom = 12.dp)
                         ) {
                             items(playlistNames) { name ->
+                                val (pressSource, pressModifier) = rememberPressFeedback()
                                 Row(
-                                    Modifier.fillMaxWidth()
+                                    Modifier.fillMaxWidth().then(pressModifier)
                                         .animateContentSize(tween(240))
                                         .clip(RoundedCornerShape(16.dp))
                                         .background(SurfaceDark)
-                                        .clickable {
+                                        .clickable(interactionSource = pressSource, indication = null) {
                                             selectedPlaylist = name
                                             showFavoritesOnly = false
                                             searchQuery = ""
@@ -802,9 +821,10 @@ private fun BsmMusicApp(
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                             artistRow.forEach { artist ->
                                 val artistSongs = visibleSongs.filter { it.artist == artist }
+                                val (pressSource, pressModifier) = rememberPressFeedback()
                                 Column(
-                                    Modifier.weight(1f).animateContentSize(tween(220)).background(SurfaceDark, RoundedCornerShape(18.dp))
-                                        .clickable { selectedArtist = artist }.padding(11.dp)
+                                    Modifier.weight(1f).then(pressModifier).animateContentSize(tween(220)).background(SurfaceDark, RoundedCornerShape(18.dp))
+                                        .clickable(interactionSource = pressSource, indication = null) { selectedArtist = artist }.padding(11.dp)
                                 ) {
                                     AlbumArtwork(artistSongs.first(), Modifier.fillMaxWidth().height(104.dp).animateContentSize(tween(180)))
                                     Spacer(Modifier.height(10.dp))
@@ -824,11 +844,12 @@ private fun BsmMusicApp(
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                             albumRow.forEach { albumSong ->
                                 val albumSongs = visibleSongs.filter { it.albumId == albumSong.albumId }
+                                val (pressSource, pressModifier) = rememberPressFeedback()
                                 Column(
-                                    Modifier.weight(1f)
+                                    Modifier.weight(1f).then(pressModifier)
                                         .clip(RoundedCornerShape(19.dp))
                                         .background(Brush.linearGradient(listOf(SurfaceRaised, SurfaceDark)))
-                                        .clickable { selectedAlbum = albumSong.albumId }
+                                        .clickable(interactionSource = pressSource, indication = null) { selectedAlbum = albumSong.albumId }
                                         .animateContentSize(tween(180))
                                         .padding(10.dp)
                                 ) {
@@ -986,10 +1007,11 @@ private fun BsmMusicApp(
                                 ) {
                                     artistAlbums.forEach { albumSong ->
                                         val albumTrackCount = visibleSongs.count { it.albumId == albumSong.albumId }
+                                        val (pressSource, pressModifier) = rememberPressFeedback()
                                         Column(
-                                            Modifier.width(116.dp).animateContentSize(tween(180)).clip(RoundedCornerShape(15.dp))
+                                            Modifier.width(116.dp).then(pressModifier).animateContentSize(tween(180)).clip(RoundedCornerShape(15.dp))
                                                 .background(Color.Black.copy(alpha = 0.2f))
-                                                .clickable { selectedAlbum = albumSong.albumId }
+                                                .clickable(interactionSource = pressSource, indication = null) { selectedAlbum = albumSong.albumId }
                                                 .padding(7.dp)
                                         ) {
                                             Box {
@@ -1423,14 +1445,15 @@ private fun SongRow(
     extraLabel: String? = null
 ) {
     val onClick = remember(song, onSongClick) { { onSongClick(song) } }
+    val (pressSource, pressModifier) = rememberPressFeedback()
     var showActions by remember(song.id) { mutableStateOf(false) }
     Row(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().then(pressModifier)
             .height(82.dp)
             .animateContentSize(tween(160))
             .clip(RoundedCornerShape(17.dp))
             .background(Brush.horizontalGradient(listOf(SurfaceRaised, SurfaceDark)))
-            .clickable(onClick = onClick)
+            .clickable(interactionSource = pressSource, indication = null, onClick = onClick)
             .padding(start = 10.dp, end = 5.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
