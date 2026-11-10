@@ -28,6 +28,10 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
@@ -177,10 +181,20 @@ private fun BsmMusicApp(
     var currentSong by remember { mutableStateOf<Song?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var showPlayer by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var sortByArtist by remember { mutableStateOf(false) }
+    val visibleSongs = remember(songs, searchQuery, sortByArtist) {
+        songs.filter { it.title.contains(searchQuery, true) || it.artist.contains(searchQuery, true) }
+            .let { list -> if (sortByArtist) list.sortedBy { it.artist.lowercase() } else list.sortedBy { it.title.lowercase() } }
+    }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                val uri = mediaItem?.localConfiguration?.uri
+                currentSong = songs.firstOrNull { it.uri == uri } ?: currentSong
+            }
         }
         player.addListener(listener)
         onDispose { player.removeListener(listener) }
@@ -211,11 +225,31 @@ private fun BsmMusicApp(
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
                 Text("YOUR LIBRARY", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                 Spacer(Modifier.weight(1f))
-                Text("${songs.size} SONGS", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                TextButton(onClick = { sortByArtist = !sortByArtist }) {
+                    Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp)
+                }
+                IconButton(onClick = { songs = loadSongs() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
+                }
             }
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                singleLine = true,
+                placeholder = { Text("Search songs or artists", color = Muted) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = Muted) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Accent,
+                    unfocusedBorderColor = SurfaceDark,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Accent
+                )
+            )
 
             if (!permissionGranted) {
                 Column(
@@ -253,7 +287,7 @@ private fun BsmMusicApp(
                     verticalArrangement = Arrangement.spacedBy(9.dp),
                     contentPadding = PaddingValues(bottom = 14.dp)
                 ) {
-                    items(songs, key = { it.id }) { song ->
+                    items(visibleSongs, key = { it.id }) { song ->
                         Row(
                             modifier = Modifier.fillMaxWidth()
                                 .background(SurfaceDark, RoundedCornerShape(16.dp))
@@ -305,20 +339,8 @@ private fun BsmMusicApp(
                 song = currentSong!!,
                 player = player,
                 onClose = { showPlayer = false },
-                onPrevious = {
-                    val index = songs.indexOf(currentSong)
-                    if (index > 0) {
-                        currentSong = songs[index - 1]
-                        player.seekToPreviousMediaItem()
-                    }
-                },
-                onNext = {
-                    val index = songs.indexOf(currentSong)
-                    if (index < songs.lastIndex) {
-                        currentSong = songs[index + 1]
-                        player.seekToNextMediaItem()
-                    }
-                }
+                onPrevious = { player.seekToPreviousMediaItem() },
+                onNext = { player.seekToNextMediaItem() }
             )
         }
     }
@@ -367,7 +389,26 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
             Text(formatTime(position.toLong()), color = Muted, fontSize = 11.sp)
             Text(formatTime(duration.toLong()), color = Muted, fontSize = 11.sp)
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { player.shuffleModeEnabled = !player.shuffleModeEnabled }) {
+                Icon(Icons.Default.Shuffle, contentDescription = "Shuffle", tint = if (player.shuffleModeEnabled) Accent else Muted)
+            }
+            IconButton(onClick = {
+                player.repeatMode = when (player.repeatMode) {
+                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                    else -> Player.REPEAT_MODE_OFF
+                }
+            }) {
+                Icon(
+                    if (player.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                    contentDescription = "Repeat",
+                    tint = if (player.repeatMode == Player.REPEAT_MODE_OFF) Muted else Accent
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             IconButton(onClick = onPrevious, modifier = Modifier.size(58.dp)) {
                 Icon(Icons.Default.SkipPrevious, null, tint = Color.White, modifier = Modifier.size(34.dp))
