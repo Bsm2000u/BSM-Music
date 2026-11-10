@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
@@ -1178,6 +1179,27 @@ private fun PlayerScreen(
     var isSeeking by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
     var playbackSpeed by remember { mutableFloatStateOf(player.playbackParameters.speed) }
+    var showSleepDialog by remember { mutableStateOf(false) }
+    var sleepTimerMinutes by remember { mutableIntStateOf(0) }
+    var sleepTimerRemaining by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(sleepTimerMinutes, player) {
+        if (sleepTimerMinutes > 0) {
+            val deadline = System.currentTimeMillis() + sleepTimerMinutes * 60_000L
+            while (true) {
+                val remaining = deadline - System.currentTimeMillis()
+                if (remaining <= 0L) break
+                sleepTimerRemaining = remaining
+                kotlinx.coroutines.delay(1000)
+            }
+            player.pause()
+            playing = false
+            sleepTimerMinutes = 0
+            sleepTimerRemaining = 0L
+        } else {
+            sleepTimerRemaining = 0L
+        }
+    }
 
     LaunchedEffect(song.id, player) {
         while (true) {
@@ -1221,6 +1243,13 @@ private fun PlayerScreen(
                     Text("BSM MUSIC PLAYER", color = Muted, fontSize = 9.sp, letterSpacing = 1.4.sp)
                 }
                 Spacer(Modifier.weight(1f))
+                IconButton(
+                    onClick = { showSleepDialog = true },
+                    modifier = Modifier.size(42.dp).background(SurfaceDark, CircleShape)
+                ) {
+                    Icon(Icons.Default.Alarm, contentDescription = "Sleep timer", tint = if (sleepTimerMinutes > 0) Accent else Muted)
+                }
+                Spacer(Modifier.width(6.dp))
                 IconButton(
                     onClick = onShowQueue,
                     modifier = Modifier.size(42.dp).background(SurfaceDark, CircleShape)
@@ -1307,6 +1336,15 @@ private fun PlayerScreen(
                 }
             }
 
+            if (sleepTimerMinutes > 0) {
+                Text(
+                    "SLEEP TIMER · ${formatTime(sleepTimerRemaining)}",
+                    color = Accent,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Slider(
                 value = position.coerceIn(0f, duration.coerceAtLeast(1f)),
@@ -1438,6 +1476,42 @@ private fun PlayerScreen(
             }
             Spacer(Modifier.weight(0.55f))
         }
+    }
+    if (showSleepDialog) {
+        AlertDialog(
+            onDismissRequest = { showSleepDialog = false },
+            containerColor = SurfaceDark,
+            titleContentColor = Color.White,
+            title = { Text("Sleep timer") },
+            text = {
+                Column {
+                    Text("Pause music after", color = Muted, fontSize = 12.sp)
+                    listOf(15, 30, 45, 60).forEach { minutes ->
+                        TextButton(
+                            onClick = {
+                                sleepTimerMinutes = minutes
+                                showSleepDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("$minutes minutes", color = if (sleepTimerMinutes == minutes) Accent else Color.White)
+                        }
+                    }
+                    if (sleepTimerMinutes > 0) {
+                        TextButton(
+                            onClick = {
+                                sleepTimerMinutes = 0
+                                showSleepDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("CANCEL TIMER", color = Accent, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSleepDialog = false }) { Text("CLOSE", color = Accent) }
+            }
+        )
     }
     if (showSpeedDialog) {
         AlertDialog(
