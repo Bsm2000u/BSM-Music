@@ -604,24 +604,48 @@ private fun BsmMusicApp(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp).horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth().padding(bottom = 7.dp)
+                    .background(SurfaceDark, RoundedCornerShape(18.dp)).padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP").forEach { section ->
-                    FilterChip(
-                        selected = librarySection == section,
-                        onClick = { librarySection = section; selectedArtist = null; selectedAlbum = null },
-                        label = { Text(section, fontSize = 10.sp, fontWeight = FontWeight.Bold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AccentDeep,
-                            selectedLabelColor = Color.White,
-                            labelColor = Muted
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true, selected = librarySection == section,
-                            borderColor = SurfaceRaised, selectedBorderColor = Accent
+                    val selected = librarySection == section
+                    val tabIcon = when (section) {
+                        "SONGS" -> Icons.Default.MusicNote
+                        "ARTISTS" -> Icons.Default.Person
+                        "ALBUMS" -> Icons.Default.Album
+                        "RECENT" -> Icons.Default.QueueMusic
+                        else -> Icons.Default.PlayArrow
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(13.dp))
+                            .background(if (selected) AccentDeep else Color.Transparent)
+                            .clickable {
+                                librarySection = section
+                                selectedArtist = null
+                                selectedAlbum = null
+                            }
+                            .padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            tabIcon,
+                            contentDescription = section,
+                            tint = if (selected) Accent else Muted,
+                            modifier = Modifier.size(17.dp)
                         )
-                    )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            section,
+                            color = if (selected) Color.White else Muted,
+                            fontSize = 8.sp,
+                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            letterSpacing = 0.25.sp,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
