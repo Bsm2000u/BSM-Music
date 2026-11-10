@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -52,6 +53,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.Normalizer
 
 private val Background = Color(0xFF101311)
 private val SurfaceDark = Color(0xFF1A201C)
@@ -59,7 +61,35 @@ private val Accent = Color(0xFFB8F36B)
 private val Muted = Color(0xFF929A94)
 
 @androidx.compose.runtime.Immutable
-data class Song(val id: Long, val title: String, val artist: String, val uri: Uri, val duration: Long)
+data class Song(
+    val id: Long,
+    val title: String,
+    val artist: String,
+    val uri: Uri,
+    val duration: Long,
+    val searchText: String = normalizeSearchText("$title $artist")
+)
+
+private fun normalizeSearchText(value: String): String {
+    val normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"), "")
+        .replace('ـ', ' ')
+        .lowercase()
+    return buildString(normalized.length) {
+        normalized.forEach { character ->
+            append(
+                when (character) {
+                    'أ', 'إ', 'آ', 'ٱ' -> 'ا'
+                    'ى' -> 'ي'
+                    'ؤ' -> 'و'
+                    'ئ' -> 'ي'
+                    'ة' -> 'ه'
+                    else -> character
+                }
+            )
+        }
+    }.replace(Regex("\\s+"), " ").trim()
+}
 
 class MainActivity : ComponentActivity() {
     private var controllerFuture: ListenableFuture<MediaController>? = null
@@ -204,10 +234,10 @@ private fun BsmMusicApp(
     val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
     var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
     LaunchedEffect(songs, searchQuery, sortByArtist) {
-        val query = searchQuery.trim()
+        val queryWords = normalizeSearchText(searchQuery).split(' ').filter { it.isNotBlank() }
         visibleSongs = withContext(Dispatchers.Default) {
-            val filtered = if (query.isBlank()) songs else {
-                songs.filter { it.title.contains(query, true) || it.artist.contains(query, true) }
+            val filtered = if (queryWords.isEmpty()) songs else {
+                songs.filter { song -> queryWords.all { word -> word in song.searchText } }
             }
             if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
         }
@@ -324,9 +354,11 @@ private fun BsmMusicApp(
                     TextButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) { Text(if (isRefreshing) "Refreshing…" else "Refresh library") }
                 }
             } else {
+                val songListState = rememberLazyListState()
                 LazyColumn(
+                    state = songListState,
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(9.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     contentPadding = PaddingValues(bottom = 14.dp)
                 ) {
                     items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
@@ -373,6 +405,7 @@ private fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
     val onClick = remember(song, onSongClick) { { onSongClick(song) } }
     Row(
         modifier = Modifier.fillMaxWidth()
+            .height(72.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(SurfaceDark)
             .clickable(onClick = onClick)
