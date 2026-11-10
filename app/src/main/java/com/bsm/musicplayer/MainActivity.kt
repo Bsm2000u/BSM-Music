@@ -188,7 +188,7 @@ private fun BsmMusicApp(
             .let { list -> if (sortByArtist) list.sortedBy { it.artist.lowercase() } else list.sortedBy { it.title.lowercase() } }
     }
 
-    DisposableEffect(player) {
+    DisposableEffect(player, songs) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
