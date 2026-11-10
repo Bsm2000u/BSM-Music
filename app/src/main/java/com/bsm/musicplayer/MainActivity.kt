@@ -796,14 +796,32 @@ private fun BsmMusicApp(
                             albumRow.forEach { albumSong ->
                                 val albumSongs = visibleSongs.filter { it.albumId == albumSong.albumId }
                                 Column(
-                                    Modifier.weight(1f).background(SurfaceDark, RoundedCornerShape(18.dp))
-                                        .clickable { selectedAlbum = albumSong.albumId }.padding(11.dp)
+                                    Modifier.weight(1f)
+                                        .clip(RoundedCornerShape(19.dp))
+                                        .background(Brush.linearGradient(listOf(SurfaceRaised, SurfaceDark)))
+                                        .clickable { selectedAlbum = albumSong.albumId }
+                                        .padding(10.dp)
                                 ) {
-                                    AlbumArtwork(albumSong, Modifier.fillMaxWidth().height(126.dp))
-                                    Spacer(Modifier.height(9.dp))
+                                    Box {
+                                        AlbumArtwork(albumSong, Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(14.dp)))
+                                        Box(
+                                            Modifier.align(Alignment.BottomEnd).padding(7.dp)
+                                                .background(AccentDeep, RoundedCornerShape(9.dp))
+                                                .padding(horizontal = 8.dp, vertical = 5.dp)
+                                        ) {
+                                            Text("${albumSongs.size} TRACKS", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.4.sp)
+                                        }
+                                    }
+                                    Spacer(Modifier.height(10.dp))
                                     Text(albumSong.album, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+                                    Spacer(Modifier.height(3.dp))
                                     Text(albumSong.artist, color = Muted, fontSize = 10.sp, maxLines = 1)
-                                    Text("${albumSongs.size} tracks", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                    Spacer(Modifier.height(5.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(Modifier.size(5.dp).background(Accent, CircleShape))
+                                        Spacer(Modifier.width(5.dp))
+                                        Text("OPEN ALBUM", color = Accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp)
+                                    }
                                 }
                             }
                             if (albumRow.size == 1) Spacer(Modifier.weight(1f))
@@ -1286,22 +1304,34 @@ private fun SongRow(
     var showActions by remember(song.id) { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth()
-            .height(78.dp)
-            .background(SurfaceDark, RoundedCornerShape(18.dp))
+            .height(82.dp)
+            .clip(RoundedCornerShape(17.dp))
+            .background(Brush.horizontalGradient(listOf(SurfaceRaised, SurfaceDark)))
             .clickable(onClick = onClick)
             .padding(start = 10.dp, end = 5.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AlbumArtwork(song, Modifier.size(54.dp))
-        Column(Modifier.weight(1f).padding(start = 12.dp, end = 7.dp)) {
-            Text(song.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+        Box {
+            AlbumArtwork(song, Modifier.size(56.dp).clip(RoundedCornerShape(13.dp)))
+            Box(
+                Modifier.align(Alignment.BottomEnd).padding(3.dp)
+                    .size(17.dp).background(Accent, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Background, modifier = Modifier.size(12.dp))
+            }
+        }
+        Column(Modifier.weight(1f).padding(start = 11.dp, end = 6.dp)) {
+            Text(song.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
             Spacer(Modifier.height(3.dp))
-            Text(song.artist, color = Muted, fontSize = 11.sp, maxLines = 1)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                if (extraLabel == null) formatTime(song.duration) else "$extraLabel · ${formatTime(song.duration)}",
-                color = Accent.copy(alpha = 0.9f), fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1
-            )
+            Text(song.artist, color = Muted, fontSize = 10.sp, maxLines = 1)
+            Spacer(Modifier.height(5.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (extraLabel == null) formatTime(song.duration) else "$extraLabel · ${formatTime(song.duration)}",
+                    color = Accent.copy(alpha = 0.95f), fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1
+                )
+            }
         }
         IconButton(onClick = onToggleFavorite, modifier = Modifier.size(38.dp)) {
             Icon(
