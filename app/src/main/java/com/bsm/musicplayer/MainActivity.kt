@@ -1346,37 +1346,52 @@ private fun PlayerScreen(
             Spacer(Modifier.weight(if (compactLayout) 0.12f else 0.42f))
             Box(
                 modifier = Modifier.size(artworkSize)
+                    .graphicsLayer {
+                        shadowElevation = 30f
+                        shape = RoundedCornerShape(30.dp)
+                        clip = true
+                    }
                     .background(
-                        Brush.linearGradient(listOf(Color(0xFF641C30), AccentDeep, SurfaceRaised)),
+                        Brush.linearGradient(listOf(Color(0xFFFF6478), Color(0xFF651B31), Color(0xFF24202A))),
                         RoundedCornerShape(30.dp)
                     )
-                    .padding(12.dp)
-                    .background(Color.White.copy(alpha = 0.045f), RoundedCornerShape(23.dp)),
+                    .padding(2.dp)
+                    .background(
+                        Brush.linearGradient(listOf(Color(0xFF35121D), Color(0xFF17151D))),
+                        RoundedCornerShape(28.dp)
+                    )
+                    .padding(10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                AlbumArtwork(song, Modifier.fillMaxSize().padding(14.dp).clip(RoundedCornerShape(18.dp)))
+                AlbumArtwork(song, Modifier.fillMaxSize().clip(RoundedCornerShape(21.dp)))
                 Box(
                     Modifier.align(Alignment.BottomCenter)
-                        .padding(bottom = 14.dp)
-                        .background(Color.Black.copy(alpha = 0.48f), RoundedCornerShape(30.dp))
-                        .padding(horizontal = 13.dp, vertical = 5.dp)
+                        .padding(bottom = 12.dp)
+                        .background(Color.Black.copy(alpha = 0.62f), RoundedCornerShape(30.dp))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
-                    Text("BSM • MUSIC", color = Color.White.copy(alpha = 0.82f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
+                    Text("NOW PLAYING  •  BSM", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
                 }
             }
 
             Spacer(Modifier.height(if (compactLayout) 12.dp else 23.dp))
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     song.title,
                     color = Color.White,
-                    fontSize = if (compactLayout) 19.sp else 22.sp,
+                    fontSize = if (compactLayout) 20.sp else 24.sp,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 1
                 )
-                Spacer(Modifier.height(6.dp))
-                Text(song.artist, color = Color.White.copy(alpha = 0.78f), fontSize = 14.sp, maxLines = 1)
-                Text(song.album, color = Muted, fontSize = 11.sp, maxLines = 1)
+                Spacer(Modifier.height(5.dp))
+                Text(song.artist, color = Color.White.copy(alpha = 0.82f), fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                if (song.album.isNotBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Text(song.album, color = Muted, fontSize = 11.sp, maxLines = 1)
+                }
             }
 
             Spacer(Modifier.height(if (compactLayout) 4.dp else 9.dp))
@@ -1384,7 +1399,7 @@ private fun PlayerScreen(
             Spacer(Modifier.height(if (compactLayout) 4.dp else 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 PlayerActionButton(
@@ -1393,21 +1408,18 @@ private fun PlayerScreen(
                     tint = if (isFavorite) Accent else Muted,
                     onClick = onToggleFavorite
                 )
-                Spacer(Modifier.width(34.dp))
                 PlayerActionButton(
                     icon = Icons.Default.PlaylistAdd,
                     label = "PLAYLIST",
                     tint = Muted,
                     onClick = onAddToPlaylist
                 )
-                Spacer(Modifier.width(34.dp))
                 PlayerActionButton(
                     icon = Icons.Default.QueueMusic,
                     label = "QUEUE",
                     tint = Muted,
                     onClick = onShowQueue
                 )
-                Spacer(Modifier.width(18.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     TextButton(
                         onClick = { showSpeedDialog = true },
@@ -1430,63 +1442,62 @@ private fun PlayerScreen(
                 )
             }
             Spacer(Modifier.height(if (compactLayout) 4.dp else 8.dp))
-            Slider(
-                value = position.coerceIn(0f, duration.coerceAtLeast(1f)),
-                onValueChange = {
-                    isSeeking = true
-                    position = it
-                },
-                onValueChangeFinished = {
-                    player.seekTo(position.toLong())
-                    isSeeking = false
-                },
-                valueRange = 0f..duration.coerceAtLeast(1f),
-                colors = SliderDefaults.colors(
-                    thumbColor = Accent,
-                    activeTrackColor = Accent,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.14f)
-                )
-            )
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 3.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(SurfaceDark.copy(alpha = 0.82f), RoundedCornerShape(22.dp))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Text(
-                    formatTime(position.toLong()),
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                Slider(
+                    value = position.coerceIn(0f, duration.coerceAtLeast(1f)),
+                    onValueChange = {
+                        isSeeking = true
+                        position = it
+                    },
+                    onValueChangeFinished = {
+                        player.seekTo(position.toLong())
+                        isSeeking = false
+                    },
+                    valueRange = 0f..duration.coerceAtLeast(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Accent,
+                        activeTrackColor = Accent,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.14f)
+                    )
                 )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    "−10s",
-                    color = Muted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .background(SurfaceDark, RoundedCornerShape(20.dp))
-                        .clickable {
-                            player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L))
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    "+10s",
-                    color = Muted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .background(SurfaceDark, RoundedCornerShape(20.dp))
-                        .clickable {
-                            val totalDuration = player.duration.takeIf { it > 0L }
-                            val target = player.currentPosition + 10_000L
-                            player.seekTo(totalDuration?.let { target.coerceAtMost(it) } ?: target)
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                )
-                Spacer(Modifier.weight(1f))
-                Text(formatTime(duration.toLong()), color = Muted, fontSize = 11.sp)
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(formatTime(position.toLong()), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "−10s",
+                        color = Muted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(SurfaceRaised, RoundedCornerShape(20.dp))
+                            .clickable { player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) }
+                            .padding(horizontal = 11.dp, vertical = 6.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "+10s",
+                        color = Muted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(SurfaceRaised, RoundedCornerShape(20.dp))
+                            .clickable {
+                                val totalDuration = player.duration.takeIf { it > 0L }
+                                val target = player.currentPosition + 10_000L
+                                player.seekTo(totalDuration?.let { target.coerceAtMost(it) } ?: target)
+                            }
+                            .padding(horizontal = 11.dp, vertical = 6.dp)
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(formatTime(duration.toLong()), color = Muted, fontSize = 11.sp)
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -1506,17 +1517,20 @@ private fun PlayerScreen(
                     Text("SHUFFLE", color = if (player.shuffleModeEnabled) Accent else Muted, fontSize = 8.sp, letterSpacing = 1.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onPrevious, modifier = Modifier.size(52.dp)) {
-                        Icon(Icons.Default.SkipPrevious, contentDescription = "Previous track", tint = Color.White, modifier = Modifier.size(31.dp))
+                    IconButton(
+                        onClick = onPrevious,
+                        modifier = Modifier.size(50.dp).background(SurfaceDark, CircleShape)
+                    ) {
+                        Icon(Icons.Default.SkipPrevious, contentDescription = "Previous track", tint = Color.White, modifier = Modifier.size(29.dp))
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(14.dp))
                     IconButton(
                         onClick = {
                             if (player.isPlaying) player.pause() else player.play()
                             playing = player.isPlaying
                         },
-                        modifier = Modifier.size(70.dp).background(
-                            Brush.linearGradient(listOf(Color(0xFFFF6675), Accent)),
+                        modifier = Modifier.size(76.dp).background(
+                            Brush.linearGradient(listOf(Color(0xFFFF8793), Accent, Color(0xFFCF1835))),
                             CircleShape
                         )
                     ) {
@@ -1524,12 +1538,15 @@ private fun PlayerScreen(
                             if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (playing) "Pause" else "Play",
                             tint = Background,
-                            modifier = Modifier.size(39.dp)
+                            modifier = Modifier.size(43.dp)
                         )
                     }
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = onNext, modifier = Modifier.size(52.dp)) {
-                        Icon(Icons.Default.SkipNext, contentDescription = "Next track", tint = Color.White, modifier = Modifier.size(31.dp))
+                    Spacer(Modifier.width(14.dp))
+                    IconButton(
+                        onClick = onNext,
+                        modifier = Modifier.size(50.dp).background(SurfaceDark, CircleShape)
+                    ) {
+                        Icon(Icons.Default.SkipNext, contentDescription = "Next track", tint = Color.White, modifier = Modifier.size(29.dp))
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
