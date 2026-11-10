@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -232,6 +234,17 @@ private fun BsmMusicApp(
     var searchQuery by remember { mutableStateOf("") }
     var sortByArtist by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val favoritesPrefs = remember(context) { context.getSharedPreferences("bsm_music_preferences", android.content.Context.MODE_PRIVATE) }
+    var favoriteIds by remember {
+        mutableStateOf(favoritesPrefs.getStringSet("favorite_song_ids", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet())
+    }
+    var showFavoritesOnly by remember { mutableStateOf(false) }
+    fun toggleFavorite(song: Song) {
+        val updated = if (song.id in favoriteIds) favoriteIds - song.id else favoriteIds + song.id
+        favoriteIds = updated
+        favoritesPrefs.edit().putStringSet("favorite_song_ids", updated.map { it.toString() }.toSet()).apply()
+    }
     val scope = rememberCoroutineScope()
     fun refreshLibrary() {
         scope.launch {
@@ -246,11 +259,14 @@ private fun BsmMusicApp(
     }
     val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
     var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
-    LaunchedEffect(songs, searchQuery, sortByArtist) {
+    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly) {
         val queryWords = normalizeSearchText(searchQuery).split(' ').filter { it.isNotBlank() }
         visibleSongs = withContext(Dispatchers.Default) {
-            val filtered = if (queryWords.isEmpty()) songs else {
+            val searched = if (queryWords.isEmpty()) songs else {
                 songs.filter { song -> queryWords.all { word -> word in song.searchText } }
+            }
+            val filtered = searched.filter { song ->
+                (!showFavoritesOnly || song.id in favoriteIds)
             }
             if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
         }
@@ -351,6 +367,42 @@ private fun BsmMusicApp(
                     Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = !showFavoritesOnly,
+                    onClick = { showFavoritesOnly = false },
+                    label = { Text("ALL SONGS", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = AccentDeep,
+                        selectedLabelColor = Color.White,
+                        labelColor = Muted
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true, selected = !showFavoritesOnly,
+                        borderColor = SurfaceRaised, selectedBorderColor = Accent
+                    )
+                )
+                FilterChip(
+                    selected = showFavoritesOnly,
+                    onClick = { showFavoritesOnly = true },
+                    label = { Text("FAVORITES · ${favoriteIds.size}", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                    leadingIcon = { Icon(Icons.Default.Favorite, null, modifier = Modifier.size(13.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = AccentDeep,
+                        selectedLabelColor = Color.White,
+                        labelColor = Muted,
+                        selectedLeadingIconColor = Accent,
+                        leadingIconColor = Muted
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true, selected = showFavoritesOnly,
+                        borderColor = SurfaceRaised, selectedBorderColor = Accent
+                    )
+                )
+            }
             if (!permissionGranted) {
                 Column(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(54.dp))
@@ -376,14 +428,27 @@ private fun BsmMusicApp(
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
                         Icon(Icons.Default.Search, null, tint = Muted, modifier = Modifier.size(38.dp))
                         Spacer(Modifier.height(10.dp))
-                        Text("No matching songs", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Try another song or artist name", color = Muted, fontSize = 12.sp)
+                        Text(
+                            if (showFavoritesOnly) "No favorites yet" else "No matching songs",
+                            color = Color.White, fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (showFavoritesOnly) "Tap the heart on a song to save it here" else "Try another song or artist name",
+                            color = Muted, fontSize = 12.sp
+                        )
                     }
                 }
             } else {
                 val songListState = rememberLazyListState()
                 LazyColumn(state = songListState, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
-                    items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song -> SongRow(song = song, onSongClick = onSongClick) }
+                    items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
+                        SongRow(
+                            song = song,
+                            isFavorite = song.id in favoriteIds,
+                            onSongClick = onSongClick,
+                            onToggleFavorite = { toggleFavorite(song) }
+                        )
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 8.dp).background(SurfaceRaised, RoundedCornerShape(20.dp)).clickable { if (currentSong != null) showPlayer = true }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -405,14 +470,19 @@ private fun BsmMusicApp(
 
 
 @Composable
-private fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
+private fun SongRow(
+    song: Song,
+    isFavorite: Boolean,
+    onSongClick: (Song) -> Unit,
+    onToggleFavorite: () -> Unit
+) {
     val onClick = remember(song, onSongClick) { { onSongClick(song) } }
     Row(
         modifier = Modifier.fillMaxWidth()
             .height(72.dp)
             .background(SurfaceDark, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(13.dp),
+            .padding(start = 13.dp, end = 7.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -426,6 +496,14 @@ private fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
             Text(song.artist, color = Muted, fontSize = 12.sp, maxLines = 1)
         }
         Text(formatTime(song.duration), color = Muted, fontSize = 11.sp)
+        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(42.dp)) {
+            Icon(
+                if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                tint = if (isFavorite) Accent else Muted,
+                modifier = Modifier.size(19.dp)
+            )
+        }
     }
 }
 
