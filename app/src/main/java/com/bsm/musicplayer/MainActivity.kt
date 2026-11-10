@@ -1217,14 +1217,16 @@ private fun PlayerScreen(
         else -> "Repeat off"
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
             .background(Brush.verticalGradient(listOf(Color(0xFF35121D), Color(0xFF151016), Background, Background)))
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
+        val compactLayout = maxHeight < 760.dp || maxWidth < 370.dp
+        val artworkSize = minOf(maxWidth - 60.dp, maxHeight * if (compactLayout) 0.28f else 0.36f).coerceAtLeast(150.dp)
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = if (compactLayout) 14.dp else 22.dp, vertical = if (compactLayout) 4.dp else 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
@@ -1258,10 +1260,9 @@ private fun PlayerScreen(
                 }
             }
 
-            Spacer(Modifier.weight(0.42f))
+            Spacer(Modifier.weight(if (compactLayout) 0.12f else 0.42f))
             Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp)
-                    .aspectRatio(1f)
+                modifier = Modifier.size(artworkSize)
                     .background(
                         Brush.linearGradient(listOf(Color(0xFF641C30), AccentDeep, SurfaceRaised)),
                         RoundedCornerShape(30.dp)
@@ -1281,12 +1282,12 @@ private fun PlayerScreen(
                 }
             }
 
-            Spacer(Modifier.height(23.dp))
+            Spacer(Modifier.height(if (compactLayout) 12.dp else 23.dp))
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     song.title,
                     color = Color.White,
-                    fontSize = 22.sp,
+                    fontSize = if (compactLayout) 19.sp else 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 1
                 )
@@ -1295,9 +1296,9 @@ private fun PlayerScreen(
                 Text(song.album, color = Muted, fontSize = 11.sp, maxLines = 1)
             }
 
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(if (compactLayout) 4.dp else 9.dp))
             PlaybackVisualizer(isPlaying = playing)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(if (compactLayout) 4.dp else 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -1345,7 +1346,7 @@ private fun PlayerScreen(
                     letterSpacing = 1.sp
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(if (compactLayout) 4.dp else 8.dp))
             Slider(
                 value = position.coerceIn(0f, duration.coerceAtLeast(1f)),
                 onValueChange = {
@@ -1474,7 +1475,7 @@ private fun PlayerScreen(
                     )
                 }
             }
-            Spacer(Modifier.weight(0.55f))
+            Spacer(Modifier.weight(if (compactLayout) 0.12f else 0.55f))
         }
     }
     if (showSleepDialog) {
