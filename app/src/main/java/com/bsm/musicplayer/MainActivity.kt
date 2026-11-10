@@ -202,11 +202,24 @@ private fun BsmMusicApp(
         songs.map { MediaItem.fromUri(it.uri) }
     }
     val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
-    val visibleSongs = remember(songs, searchQuery, sortByArtist) {
-        val filtered = if (searchQuery.isBlank()) songs else {
-            songs.filter { it.title.contains(searchQuery, true) || it.artist.contains(searchQuery, true) }
+    var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
+    LaunchedEffect(songs, searchQuery, sortByArtist) {
+        val query = searchQuery.trim()
+        visibleSongs = withContext(Dispatchers.Default) {
+            val filtered = if (query.isBlank()) songs else {
+                songs.filter { it.title.contains(query, true) || it.artist.contains(query, true) }
+            }
+            if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
         }
-        if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
+    }
+    val onSongClick: (Song) -> Unit = remember(player, songIndexById) {
+        { song ->
+            currentSong = song
+            player.seekTo(songIndexById[song.id] ?: 0, 0L)
+            if (player.playbackState == Player.STATE_IDLE) player.prepare()
+            player.play()
+            showPlayer = true
+        }
     }
 
     LaunchedEffect(mediaItems) {
@@ -317,16 +330,7 @@ private fun BsmMusicApp(
                     contentPadding = PaddingValues(bottom = 14.dp)
                 ) {
                     items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
-                        SongRow(
-                            song = song,
-                            onClick = {
-                                currentSong = song
-                                player.seekTo(songIndexById[song.id] ?: 0, 0L)
-                                if (player.playbackState == Player.STATE_IDLE) player.prepare()
-                                player.play()
-                                showPlayer = true
-                            }
-                        )
+                        SongRow(song = song, onSongClick = onSongClick)
                     }
                 }
             }
@@ -365,7 +369,8 @@ private fun BsmMusicApp(
 
 
 @Composable
-private fun SongRow(song: Song, onClick: () -> Unit) {
+private fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
+    val onClick = remember(song, onSongClick) { { onSongClick(song) } }
     Row(
         modifier = Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
