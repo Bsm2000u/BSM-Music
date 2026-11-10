@@ -502,15 +502,19 @@ private fun BsmMusicApp(
                     )
                 }
         ) {
-            Row(Modifier.fillMaxWidth().padding(top = 7.dp, bottom = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 3.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("YOUR MUSIC. YOUR RULES.", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+                    Text("YOUR MUSIC. YOUR RULES.", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text("BSM", color = Accent, fontSize = 25.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                        Text(" MUSIC", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                        Text("BSM", color = Accent, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(" MUSIC", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
                     }
                 }
-                IconButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("LOCAL PLAYER", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("${songs.size} TRACKS", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                IconButton(onClick = { refreshLibrary() }, enabled = !isRefreshing, modifier = Modifier.size(40.dp)) {
                     if (isRefreshing) CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(19.dp))
                     else Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
                 }
@@ -522,21 +526,18 @@ private fun BsmMusicApp(
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent) },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = SurfaceDark, focusedContainerColor = SurfaceDark, unfocusedContainerColor = SurfaceDark, focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Accent)
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(7.dp))
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(19.dp))
-                    .background(Brush.linearGradient(listOf(AccentDeep, SurfaceRaised)))
-                    .padding(horizontal = 15.dp, vertical = 10.dp),
+                Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(15.dp))
+                    .background(Brush.horizontalGradient(listOf(AccentDeep, SurfaceRaised)))
+                    .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text("YOUR LIBRARY", color = Color.White.copy(alpha = 0.7f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text("${songs.size}", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.width(7.dp))
-                        Text("TRACKS", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
+                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(19.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("${songs.size} TRACKS", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                Text("YOUR LIBRARY", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                Spacer(Modifier.width(9.dp))
                 Button(onClick = {
                     if (songs.isNotEmpty()) {
                         currentSong = songs.first()
@@ -546,18 +547,16 @@ private fun BsmMusicApp(
                         player.play()
                         showPlayer = true
                     }
-                }, enabled = songs.isNotEmpty(), shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 13.dp, vertical = 8.dp),
+                }, enabled = songs.isNotEmpty(), shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 11.dp, vertical = 5.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background, disabledContainerColor = SurfaceRaised, disabledContentColor = Muted)
                 ) {
-                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(17.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("PLAY ALL", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text("PLAY", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                Spacer(Modifier.width(8.dp))
-                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(27.dp))
             }
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(selectedArtist ?: (selectedAlbum?.let { id -> songs.firstOrNull { it.albumId == id }?.album } ?: "YOUR LIBRARY"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, maxLines = 1)
                     Text(
@@ -588,8 +587,8 @@ private fun BsmMusicApp(
                 }
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 FilterChip(
                     selected = !showFavoritesOnly,
@@ -624,8 +623,8 @@ private fun BsmMusicApp(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 7.dp)
-                    .background(SurfaceDark, RoundedCornerShape(18.dp)).padding(4.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                    .background(SurfaceDark, RoundedCornerShape(16.dp)).padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -646,7 +645,7 @@ private fun BsmMusicApp(
                                 selectedArtist = null
                                 selectedAlbum = null
                             }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
