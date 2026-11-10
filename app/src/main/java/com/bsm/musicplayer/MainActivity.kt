@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -278,6 +279,17 @@ private fun BsmMusicApp(
     var selectedArtist by remember { mutableStateOf<String?>(null) }
     var selectedAlbum by remember { mutableStateOf<Long?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
+
+    BackHandler(
+        enabled = showQueue || showPlayer || selectedAlbum != null || selectedArtist != null
+    ) {
+        when {
+            showQueue -> showQueue = false
+            showPlayer -> showPlayer = false
+            selectedAlbum != null -> selectedAlbum = null
+            selectedArtist != null -> selectedArtist = null
+        }
+    }
     LaunchedEffect(sleepTimerMinutes, player) {
         if (sleepTimerMinutes > 0) {
             val deadline = System.currentTimeMillis() + sleepTimerMinutes * 60_000L
