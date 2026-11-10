@@ -528,21 +528,36 @@ private fun BsmMusicApp(
                     )
                 }
         ) {
-            Row(Modifier.fillMaxWidth().padding(top = 3.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("YOUR MUSIC. YOUR RULES.", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier.size(43.dp).clip(RoundedCornerShape(15.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFFFF8291), Accent, AccentDeep))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(25.dp))
+                }
+                Column(Modifier.weight(1f).padding(start = 11.dp)) {
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text("BSM", color = Accent, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                        Text(" MUSIC", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                        Text("BSM", color = Accent, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                        Text(" MUSIC", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
                     }
+                    Text("YOUR PERSONAL SOUNDSPACE", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("LOCAL PLAYER", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Text("${songs.size} TRACKS", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("LOCAL LIBRARY", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                    Text("${songs.size} TRACKS", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                IconButton(onClick = { refreshLibrary() }, enabled = !isRefreshing, modifier = Modifier.size(40.dp)) {
-                    if (isRefreshing) CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(19.dp))
-                    else Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
+                Spacer(Modifier.width(5.dp))
+                IconButton(
+                    onClick = { refreshLibrary() },
+                    enabled = !isRefreshing,
+                    modifier = Modifier.size(39.dp).clip(CircleShape).background(SurfaceDark)
+                ) {
+                    if (isRefreshing) CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    else Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent, modifier = Modifier.size(19.dp))
                 }
             }
             OutlinedTextField(
@@ -553,43 +568,71 @@ private fun BsmMusicApp(
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = SurfaceDark, focusedContainerColor = SurfaceDark, unfocusedContainerColor = SurfaceDark, focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Accent)
             )
             Spacer(Modifier.height(7.dp))
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF54202F), AccentDeep, SurfaceDark)))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(23.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFF67283B), Color(0xFF351B2A), SurfaceDark)))
+                    .padding(horizontal = 15.dp, vertical = 14.dp)
             ) {
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(7.dp).background(Accent, CircleShape))
-                        Spacer(Modifier.width(6.dp))
-                        Text("YOUR COLLECTION", color = Color.White.copy(alpha = 0.9f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
-                    }
-                    Spacer(Modifier.height(7.dp))
-                    Text("${songs.size} tracks", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(5.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("${songs.map { it.artist }.distinct().size} artists", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
-                        Text("${songs.map { it.albumId }.distinct().size} albums", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
-                    }
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(48.dp).background(Accent, CircleShape), contentAlignment = Alignment.Center) {
-                        IconButton(onClick = {
-                            if (songs.isNotEmpty()) {
-                                currentSong = songs.first()
-                                player.shuffleModeEnabled = false
-                                player.seekTo(0, 0L)
-                                if (player.playbackState == Player.STATE_IDLE) player.prepare()
-                                player.play()
-                                showPlayer = true
+                Box(
+                    Modifier.align(Alignment.TopEnd).offset(x = 27.dp, y = (-34).dp)
+                        .size(122.dp).background(Accent.copy(alpha = 0.10f), CircleShape)
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.MusicNote, null, tint = Color(0xFFFFA0AC), modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("YOUR COLLECTION", color = Color.White.copy(alpha = 0.88f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.25.sp)
+                        }
+                        Spacer(Modifier.height(7.dp))
+                        Text("${songs.size}", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Black, lineHeight = 31.sp)
+                        Text("TRACKS READY TO PLAY", color = Color.White.copy(alpha = 0.68f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Row(
+                                Modifier.clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha = 0.20f))
+                                    .padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Person, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(11.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("${songs.map { it.artist }.distinct().size} artists", color = Color.White.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                             }
-                        }, enabled = songs.isNotEmpty()) {
-                            Icon(Icons.Default.PlayArrow, null, tint = Background, modifier = Modifier.size(27.dp))
+                            Row(
+                                Modifier.clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha = 0.20f))
+                                    .padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Album, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(11.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("${songs.map { it.albumId }.distinct().size} albums", color = Color.White.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text("PLAY ALL", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            Modifier.size(54.dp).background(
+                                Brush.linearGradient(listOf(Color(0xFFFFA0AC), Accent, Color(0xFFCF1835))),
+                                CircleShape
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(onClick = {
+                                if (songs.isNotEmpty()) {
+                                    currentSong = songs.first()
+                                    player.shuffleModeEnabled = false
+                                    player.seekTo(0, 0L)
+                                    if (player.playbackState == Player.STATE_IDLE) player.prepare()
+                                    player.play()
+                                    showPlayer = true
+                                }
+                            }, enabled = songs.isNotEmpty()) {
+                                Icon(Icons.Default.PlayArrow, null, tint = Background, modifier = Modifier.size(30.dp))
+                            }
+                        }
+                        Spacer(Modifier.height(5.dp))
+                        Text("PLAY ALL", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1499,6 +1542,18 @@ private fun PlayerScreen(
         }
     }
 
+    val artworkTransition = rememberInfiniteTransition(label = "album_art_rotation")
+    val continuousRotation by artworkTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 24000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "album_art_rotation_value"
+    )
+    val artworkRotation = if (playing) continuousRotation else 0f
+
     val repeatLabel = when (player.repeatMode) {
         Player.REPEAT_MODE_ONE -> "Repeat one"
         Player.REPEAT_MODE_ALL -> "Repeat all"
@@ -1575,7 +1630,11 @@ private fun PlayerScreen(
                         .padding(9.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    AlbumArtwork(song, Modifier.fillMaxSize().clip(RoundedCornerShape(21.dp)))
+                    AlbumArtwork(
+                        song,
+                        Modifier.fillMaxSize().clip(RoundedCornerShape(21.dp))
+                            .graphicsLayer { rotationZ = artworkRotation }
+                    )
                     Box(
                         Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
                             .background(Color.Black.copy(alpha = 0.68f), RoundedCornerShape(30.dp))
