@@ -833,7 +833,7 @@ private fun BsmMusicApp(
             }
         }
         if (showPlayer && currentSong != null) {
-            PlayerScreen(song = currentSong!!, player = player, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true })
+            PlayerScreen(song = currentSong!!, player = player, isFavorite = currentSong!!.id in favoriteIds, onToggleFavorite = { toggleFavorite(currentSong!!) }, onAddToPlaylist = { songForPlaylist = currentSong }, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true })
         }
         if (showQueue) {
             AlertDialog(
@@ -1156,7 +1156,17 @@ private fun SongRow(
 }
 
 @Composable
-private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrevious: () -> Unit, onNext: () -> Unit, onShowQueue: () -> Unit) {
+private fun PlayerScreen(
+    song: Song,
+    player: Player,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onClose: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onShowQueue: () -> Unit
+) {
     var position by remember(song.id) { mutableFloatStateOf(0f) }
     var duration by remember(song.id) { mutableFloatStateOf(song.duration.toFloat().coerceAtLeast(1f)) }
     var playing by remember { mutableStateOf(player.isPlaying) }
@@ -1180,16 +1190,16 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
 
     Box(
         modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF241016), Background, Background)))
+            .background(Brush.verticalGradient(listOf(Color(0xFF35121D), Color(0xFF151016), Background, Background)))
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().height(48.dp),
+                modifier = Modifier.fillMaxWidth().height(46.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
@@ -1201,38 +1211,41 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                 Spacer(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("NOW PLAYING", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                    Text("FROM YOUR LIBRARY", color = Muted, fontSize = 9.sp, letterSpacing = 1.2.sp)
+                    Text("BSM MUSIC PLAYER", color = Muted, fontSize = 9.sp, letterSpacing = 1.4.sp)
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onShowQueue, modifier = Modifier.size(42.dp).background(SurfaceDark, CircleShape)) {
+                IconButton(
+                    onClick = onShowQueue,
+                    modifier = Modifier.size(42.dp).background(SurfaceDark, CircleShape)
+                ) {
                     Icon(Icons.Default.QueueMusic, contentDescription = "Open playing queue", tint = Accent)
                 }
             }
 
-            Spacer(Modifier.weight(0.65f))
+            Spacer(Modifier.weight(0.42f))
             Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp)
                     .aspectRatio(1f)
                     .background(
-                        Brush.linearGradient(listOf(Color(0xFF4A1421), AccentDeep, SurfaceRaised)),
+                        Brush.linearGradient(listOf(Color(0xFF641C30), AccentDeep, SurfaceRaised)),
                         RoundedCornerShape(30.dp)
                     )
-                    .padding(13.dp)
-                    .background(Color.White.copy(alpha = 0.035f), RoundedCornerShape(23.dp)),
+                    .padding(12.dp)
+                    .background(Color.White.copy(alpha = 0.045f), RoundedCornerShape(23.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                AlbumArtwork(song, Modifier.fillMaxSize().padding(17.dp).clip(CircleShape))
-                Text(
-                    "BSM",
-                    color = Color.White.copy(alpha = 0.28f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 3.sp,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp)
-                )
+                AlbumArtwork(song, Modifier.fillMaxSize().padding(14.dp).clip(RoundedCornerShape(18.dp)))
+                Box(
+                    Modifier.align(Alignment.BottomCenter)
+                        .padding(bottom = 14.dp)
+                        .background(Color.Black.copy(alpha = 0.48f), RoundedCornerShape(30.dp))
+                        .padding(horizontal = 13.dp, vertical = 5.dp)
+                ) {
+                    Text("BSM • MUSIC", color = Color.White.copy(alpha = 0.82f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
+                }
             }
 
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(23.dp))
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     song.title,
@@ -1241,12 +1254,40 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 1
                 )
-                Spacer(Modifier.height(7.dp))
-                Text(song.artist, color = Muted, fontSize = 14.sp, maxLines = 1)
-                Text(song.album, color = Muted.copy(alpha = 0.75f), fontSize = 11.sp, maxLines = 1)
+                Spacer(Modifier.height(6.dp))
+                Text(song.artist, color = Color.White.copy(alpha = 0.78f), fontSize = 14.sp, maxLines = 1)
+                Text(song.album, color = Muted, fontSize = 11.sp, maxLines = 1)
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PlayerActionButton(
+                    icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    label = if (isFavorite) "SAVED" else "FAVORITE",
+                    tint = if (isFavorite) Accent else Muted,
+                    onClick = onToggleFavorite
+                )
+                Spacer(Modifier.width(34.dp))
+                PlayerActionButton(
+                    icon = Icons.Default.PlaylistAdd,
+                    label = "PLAYLIST",
+                    tint = Muted,
+                    onClick = onAddToPlaylist
+                )
+                Spacer(Modifier.width(34.dp))
+                PlayerActionButton(
+                    icon = Icons.Default.QueueMusic,
+                    label = "QUEUE",
+                    tint = Muted,
+                    onClick = onShowQueue
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
             Slider(
                 value = position.coerceIn(0f, duration.coerceAtLeast(1f)),
                 onValueChange = {
@@ -1264,12 +1305,12 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                     inactiveTrackColor = Color.White.copy(alpha = 0.14f)
                 )
             )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(formatTime(position.toLong()), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 Text(formatTime(duration.toLong()), color = Muted, fontSize = 11.sp)
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1286,17 +1327,17 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                     Text("SHUFFLE", color = if (player.shuffleModeEnabled) Accent else Muted, fontSize = 8.sp, letterSpacing = 1.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onPrevious, modifier = Modifier.size(54.dp)) {
-                        Icon(Icons.Default.SkipPrevious, contentDescription = "Previous track", tint = Color.White, modifier = Modifier.size(32.dp))
+                    IconButton(onClick = onPrevious, modifier = Modifier.size(52.dp)) {
+                        Icon(Icons.Default.SkipPrevious, contentDescription = "Previous track", tint = Color.White, modifier = Modifier.size(31.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(8.dp))
                     IconButton(
                         onClick = {
                             if (player.isPlaying) player.pause() else player.play()
                             playing = player.isPlaying
                         },
-                        modifier = Modifier.size(72.dp).background(
-                            Brush.linearGradient(listOf(Color(0xFFFF5365), Accent)),
+                        modifier = Modifier.size(70.dp).background(
+                            Brush.linearGradient(listOf(Color(0xFFFF6675), Accent)),
                             CircleShape
                         )
                     ) {
@@ -1304,12 +1345,12 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                             if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (playing) "Pause" else "Play",
                             tint = Background,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(39.dp)
                         )
                     }
-                    Spacer(Modifier.width(10.dp))
-                    IconButton(onClick = onNext, modifier = Modifier.size(54.dp)) {
-                        Icon(Icons.Default.SkipNext, contentDescription = "Next track", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(onClick = onNext, modifier = Modifier.size(52.dp)) {
+                        Icon(Icons.Default.SkipNext, contentDescription = "Next track", tint = Color.White, modifier = Modifier.size(31.dp))
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1338,8 +1379,26 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                     )
                 }
             }
-            Spacer(Modifier.weight(0.8f))
+            Spacer(Modifier.weight(0.55f))
         }
+    }
+}
+
+@Composable
+private fun PlayerActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(42.dp).background(SurfaceDark, CircleShape)
+        ) {
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(19.dp))
+        }
+        Text(label, color = tint, fontSize = 8.sp, letterSpacing = 0.8.sp, fontWeight = FontWeight.Bold)
     }
 }
 
