@@ -241,12 +241,12 @@ private fun BsmMusicApp(
         mutableStateOf(favoritesPrefs.getStringSet("favorite_song_ids", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet())
     }
     var showFavoritesOnly by remember { mutableStateOf(false) }
-    var playlistNames by remember { mutableStateOf(favoritesPrefs.getStringSet("playlist_names", emptySet())?.toList()?.sorted() ?: emptyList()) }
+    var playlistNames by remember { mutableStateOf<List<String>>(favoritesPrefs.getStringSet("playlist_names", emptySet<String>())?.toList()?.sorted() ?: emptyList()) }
     var selectedPlaylist by remember { mutableStateOf<String?>(null) }
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
     var showCreatePlaylist by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
-    fun playlistSongIds(name: String): Set<Long> = favoritesPrefs.getStringSet("playlist_$name", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
+    fun playlistSongIds(name: String): Set<Long> = favoritesPrefs.getStringSet("playlist_$name", emptySet<String>())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
     fun savePlaylistSongIds(name: String, ids: Set<Long>) {
         favoritesPrefs.edit().putStringSet("playlist_$name", ids.map { it.toString() }.toSet()).apply()
     }
@@ -271,13 +271,14 @@ private fun BsmMusicApp(
     var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
     LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames) {
         val queryWords = normalizeSearchText(searchQuery).split(' ').filter { it.isNotBlank() }
+        val activePlaylist = selectedPlaylist
         visibleSongs = withContext(Dispatchers.Default) {
             val searched = if (queryWords.isEmpty()) songs else {
                 songs.filter { song -> queryWords.all { word -> word in song.searchText } }
             }
             val filtered = searched.filter { song ->
                 (!showFavoritesOnly || song.id in favoriteIds) &&
-                    (selectedPlaylist == null || song.id in playlistSongIds(selectedPlaylist))
+                    (activePlaylist == null || song.id in playlistSongIds(activePlaylist))
             }
             if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
         }
