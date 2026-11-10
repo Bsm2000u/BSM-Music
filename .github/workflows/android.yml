@@ -30,10 +30,10 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build debug APK
+      - name: Build optimized release APK
         run: gradle assembleRelease
 
-      - name: Upload debug APK artifact
+      - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: BSM-Music-release
@@ -45,7 +45,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: bsm-music-debug-${{ github.run_number }}
-          name: BSM Music Debug Build ${{ github.run_number }}
+          tag_name: bsm-music-release-${{ github.run_number }}
+          name: BSM Music Release ${{ github.run_number }}
           prerelease: true
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/release/app-release.apk
