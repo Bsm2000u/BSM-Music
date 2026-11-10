@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
@@ -235,6 +237,9 @@ private fun BsmMusicApp(
     var currentSong by remember { mutableStateOf<Song?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var showPlayer by remember { mutableStateOf(false) }
+    var showQueue by remember { mutableStateOf(false) }
+    var queueTracks by remember { mutableStateOf(emptyList<Pair<Int, Song>>()) }
+    var queueCurrentIndex by remember { mutableIntStateOf(-1) }
     var searchQuery by remember { mutableStateOf("") }
     var sortByArtist by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -296,6 +301,11 @@ private fun BsmMusicApp(
             if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
         }
     }
+    fun addSongToQueueNext(song: Song) {
+        val insertAt = if (player.currentMediaItemIndex >= 0) player.currentMediaItemIndex + 1 else 0
+        player.addMediaItem(insertAt.coerceAtMost(player.mediaItemCount), MediaItem.fromUri(song.uri))
+    }
+
     val onSongClick: (Song) -> Unit = remember(player, songIndexById) {
         { song ->
             currentSong = song
@@ -312,10 +322,20 @@ private fun BsmMusicApp(
 
     DisposableEffect(player, songs) {
         val listener = object : Player.Listener {
+            private fun updateQueue() {
+                queueTracks = (0 until player.mediaItemCount).mapNotNull { index ->
+                    val uri = player.getMediaItemAt(index).localConfiguration?.uri
+                    val song = songs.firstOrNull { it.uri == uri }
+                    song?.let { index to it }
+                }
+                queueCurrentIndex = player.currentMediaItemIndex
+            }
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) { updateQueue() }
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 val uri = mediaItem?.localConfiguration?.uri
                 currentSong = songs.firstOrNull { it.uri == uri } ?: currentSong
+                updateQueue()
             }
         }
         player.addListener(listener)
@@ -531,7 +551,8 @@ private fun BsmMusicApp(
                             isFavorite = song.id in favoriteIds,
                             onSongClick = onSongClick,
                             onToggleFavorite = { toggleFavorite(song) },
-                            onAddToPlaylist = { songForPlaylist = song }
+                            onAddToPlaylist = { songForPlaylist = song },
+                            onAddToQueue = { addSongToQueueNext(song) }
                         )
                     }
                 }
@@ -548,7 +569,57 @@ private fun BsmMusicApp(
             }
         }
         if (showPlayer && currentSong != null) {
-            PlayerScreen(song = currentSong!!, player = player, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() })
+            PlayerScreen(song = currentSong!!, player = player, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true })
+        }
+        if (showQueue) {
+            AlertDialog(
+                onDismissRequest = { showQueue = false },
+                title = {
+                    Column {
+                        Text("PLAYING QUEUE", color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Text("${queueTracks.size} tracks · Up next", color = Muted, fontSize = 11.sp)
+                    }
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        if (queueTracks.isEmpty()) {
+                            Text("Your queue is empty", color = Muted, fontSize = 13.sp)
+                        }
+                        queueTracks.forEach { (mediaIndex, queuedSong) ->
+                            val isCurrent = mediaIndex == queueCurrentIndex
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .background(if (isCurrent) AccentDeep else SurfaceRaised, RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        player.seekTo(mediaIndex, 0L)
+                                        player.play()
+                                        currentSong = queuedSong
+                                        showPlayer = true
+                                        showQueue = false
+                                    }
+                                    .padding(start = 11.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(queuedSong.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                    Text(if (isCurrent) "NOW PLAYING · ${queuedSong.artist}" else queuedSong.artist, color = if (isCurrent) Accent else Muted, fontSize = 10.sp, maxLines = 1)
+                                }
+                                if (!isCurrent) {
+                                    IconButton(onClick = { player.removeMediaItem(mediaIndex) }, modifier = Modifier.size(34.dp)) {
+                                        Icon(Icons.Default.Close, contentDescription = "Remove from queue", tint = Muted, modifier = Modifier.size(17.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showQueue = false }) { Text("DONE", color = Accent) } },
+                containerColor = SurfaceDark,
+                titleContentColor = Color.White
+            )
         }
         if (showCreatePlaylist) {
             AlertDialog(
@@ -752,7 +823,8 @@ private fun SongRow(
     isFavorite: Boolean,
     onSongClick: (Song) -> Unit,
     onToggleFavorite: () -> Unit,
-    onAddToPlaylist: () -> Unit
+    onAddToPlaylist: () -> Unit,
+    onAddToQueue: () -> Unit
 ) {
     val onClick = remember(song, onSongClick) { { onSongClick(song) } }
     Row(
@@ -774,6 +846,9 @@ private fun SongRow(
             Text(song.artist, color = Muted, fontSize = 12.sp, maxLines = 1)
         }
         Text(formatTime(song.duration), color = Muted, fontSize = 11.sp)
+        IconButton(onClick = onAddToQueue, modifier = Modifier.size(38.dp)) {
+            Icon(Icons.Default.QueueMusic, contentDescription = "Play next", tint = Muted, modifier = Modifier.size(19.dp))
+        }
         IconButton(onClick = onAddToPlaylist, modifier = Modifier.size(38.dp)) {
             Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to playlist", tint = Muted, modifier = Modifier.size(19.dp))
         }
@@ -789,7 +864,7 @@ private fun SongRow(
 }
 
 @Composable
-private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrevious: () -> Unit, onNext: () -> Unit) {
+private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrevious: () -> Unit, onNext: () -> Unit, onShowQueue: () -> Unit) {
     var position by remember(song.id) { mutableFloatStateOf(0f) }
     var duration by remember(song.id) { mutableFloatStateOf(song.duration.toFloat().coerceAtLeast(1f)) }
     var playing by remember { mutableStateOf(player.isPlaying) }
@@ -837,7 +912,9 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                     Text("FROM YOUR LIBRARY", color = Muted, fontSize = 9.sp, letterSpacing = 1.2.sp)
                 }
                 Spacer(Modifier.weight(1f))
-                Box(Modifier.size(42.dp))
+                IconButton(onClick = onShowQueue, modifier = Modifier.size(42.dp).background(SurfaceDark, CircleShape)) {
+                    Icon(Icons.Default.QueueMusic, contentDescription = "Open playing queue", tint = Accent)
+                }
             }
 
             Spacer(Modifier.weight(0.65f))
