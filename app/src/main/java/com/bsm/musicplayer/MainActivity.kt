@@ -476,18 +476,49 @@ private fun BsmMusicApp(
                     TextButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) { Text(if (isRefreshing) "Refreshing…" else "Refresh library") }
                 }
             } else if (visibleSongs.isEmpty()) {
+                val activePlaylistName = selectedPlaylist
+                val isEmptyPlaylist = activePlaylistName != null &&
+                    playlistSongIds(activePlaylistName).isEmpty() && searchQuery.isBlank()
                 Box(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                        Icon(Icons.Default.Search, null, tint = Muted, modifier = Modifier.size(38.dp))
-                        Spacer(Modifier.height(10.dp))
+                        Icon(
+                            if (isEmptyPlaylist) Icons.Default.MusicNote else Icons.Default.Search,
+                            null,
+                            tint = if (isEmptyPlaylist) Accent else Muted,
+                            modifier = Modifier.size(42.dp)
+                        )
+                        Spacer(Modifier.height(12.dp))
                         Text(
-                            if (showFavoritesOnly) "No favorites yet" else "No matching songs",
+                            when {
+                                isEmptyPlaylist -> "${activePlaylistName} is empty"
+                                showFavoritesOnly -> "No favorites yet"
+                                else -> "No matching songs"
+                            },
                             color = Color.White, fontWeight = FontWeight.Bold
                         )
+                        Spacer(Modifier.height(5.dp))
                         Text(
-                            if (showFavoritesOnly) "Tap the heart on a song to save it here" else "Try another song or artist name",
+                            when {
+                                isEmptyPlaylist -> "Add songs from your library using the playlist button."
+                                showFavoritesOnly -> "Tap the heart on a song to save it here"
+                                else -> "Try another song or artist name"
+                            },
                             color = Muted, fontSize = 12.sp
                         )
+                        if (isEmptyPlaylist) {
+                            Spacer(Modifier.height(14.dp))
+                            Button(
+                                onClick = {
+                                    selectedPlaylist = null
+                                    showFavoritesOnly = false
+                                    searchQuery = ""
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background)
+                            ) {
+                                Text("BROWSE LIBRARY", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
                     }
                 }
             } else {
