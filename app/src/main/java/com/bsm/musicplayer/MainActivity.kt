@@ -245,6 +245,9 @@ private fun BsmMusicApp(
     var selectedPlaylist by remember { mutableStateOf<String?>(null) }
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
     var showCreatePlaylist by remember { mutableStateOf(false) }
+    var showManagePlaylists by remember { mutableStateOf(false) }
+    var playlistToRename by remember { mutableStateOf<String?>(null) }
+    var renamePlaylistName by remember { mutableStateOf("") }
     var newPlaylistName by remember { mutableStateOf("") }
     fun playlistSongIds(name: String): Set<Long> = favoritesPrefs.getStringSet("playlist_$name", emptySet<String>())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
     fun savePlaylistSongIds(name: String, ids: Set<Long>) {
@@ -417,6 +420,11 @@ private fun BsmMusicApp(
             }
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("PLAYLISTS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
+                if (playlistNames.isNotEmpty()) {
+                    TextButton(onClick = { showManagePlaylists = true }) {
+                        Text("MANAGE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
                 TextButton(onClick = { newPlaylistName = ""; showCreatePlaylist = true }) {
                     Icon(Icons.Default.PlaylistAdd, null, tint = Accent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
