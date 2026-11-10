@@ -265,6 +265,8 @@ private fun BsmMusicApp(
     var currentSong by remember { mutableStateOf<Song?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var showPlayer by remember { mutableStateOf(false) }
+    var sleepTimerMinutes by remember { mutableIntStateOf(0) }
+    var sleepTimerRemaining by remember { mutableLongStateOf(0L) }
     var showQueue by remember { mutableStateOf(false) }
     var queueTracks by remember { mutableStateOf(emptyList<Pair<Int, Song>>()) }
     var queueCurrentIndex by remember { mutableIntStateOf(-1) }
@@ -274,6 +276,23 @@ private fun BsmMusicApp(
     var selectedArtist by remember { mutableStateOf<String?>(null) }
     var selectedAlbum by remember { mutableStateOf<Long?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(sleepTimerMinutes, player) {
+        if (sleepTimerMinutes > 0) {
+            val deadline = System.currentTimeMillis() + sleepTimerMinutes * 60_000L
+            while (true) {
+                val remaining = deadline - System.currentTimeMillis()
+                if (remaining <= 0L) break
+                sleepTimerRemaining = remaining
+                kotlinx.coroutines.delay(1000)
+            }
+            player.pause()
+            sleepTimerMinutes = 0
+            sleepTimerRemaining = 0L
+        } else {
+            sleepTimerRemaining = 0L
+        }
+    }
+
     val context = LocalContext.current
     val favoritesPrefs = remember(context) { context.getSharedPreferences("bsm_music_preferences", android.content.Context.MODE_PRIVATE) }
     var favoriteIds by remember {
@@ -839,7 +858,7 @@ private fun BsmMusicApp(
             }
         }
         if (showPlayer && currentSong != null) {
-            PlayerScreen(song = currentSong!!, player = player, isFavorite = currentSong!!.id in favoriteIds, onToggleFavorite = { toggleFavorite(currentSong!!) }, onAddToPlaylist = { songForPlaylist = currentSong }, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true })
+            PlayerScreen(song = currentSong!!, player = player, isFavorite = currentSong!!.id in favoriteIds, onToggleFavorite = { toggleFavorite(currentSong!!) }, onAddToPlaylist = { songForPlaylist = currentSong }, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true }, sleepTimerMinutes = sleepTimerMinutes, sleepTimerRemaining = sleepTimerRemaining, onSetSleepTimer = { sleepTimerMinutes = it })
         }
         if (showQueue) {
             AlertDialog(
@@ -1171,7 +1190,10 @@ private fun PlayerScreen(
     onClose: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onShowQueue: () -> Unit
+    onShowQueue: () -> Unit,
+    sleepTimerMinutes: Int,
+    sleepTimerRemaining: Long,
+    onSetSleepTimer: (Int) -> Unit
 ) {
     var position by remember(song.id) { mutableFloatStateOf(0f) }
     var duration by remember(song.id) { mutableFloatStateOf(song.duration.toFloat().coerceAtLeast(1f)) }
@@ -1180,26 +1202,6 @@ private fun PlayerScreen(
     var showSpeedDialog by remember { mutableStateOf(false) }
     var playbackSpeed by remember { mutableFloatStateOf(player.playbackParameters.speed) }
     var showSleepDialog by remember { mutableStateOf(false) }
-    var sleepTimerMinutes by remember { mutableIntStateOf(0) }
-    var sleepTimerRemaining by remember { mutableLongStateOf(0L) }
-
-    LaunchedEffect(sleepTimerMinutes, player) {
-        if (sleepTimerMinutes > 0) {
-            val deadline = System.currentTimeMillis() + sleepTimerMinutes * 60_000L
-            while (true) {
-                val remaining = deadline - System.currentTimeMillis()
-                if (remaining <= 0L) break
-                sleepTimerRemaining = remaining
-                kotlinx.coroutines.delay(1000)
-            }
-            player.pause()
-            playing = false
-            sleepTimerMinutes = 0
-            sleepTimerRemaining = 0L
-        } else {
-            sleepTimerRemaining = 0L
-        }
-    }
 
     LaunchedEffect(song.id, player) {
         while (true) {
@@ -1490,7 +1492,7 @@ private fun PlayerScreen(
                     listOf(15, 30, 45, 60).forEach { minutes ->
                         TextButton(
                             onClick = {
-                                sleepTimerMinutes = minutes
+                                onSetSleepTimer(minutes)
                                 showSleepDialog = false
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -1501,7 +1503,7 @@ private fun PlayerScreen(
                     if (sleepTimerMinutes > 0) {
                         TextButton(
                             onClick = {
-                                sleepTimerMinutes = 0
+                                onSetSleepTimer(0)
                                 showSleepDialog = false
                             },
                             modifier = Modifier.fillMaxWidth()
