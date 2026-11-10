@@ -513,12 +513,78 @@ private fun BsmMusicApp(
                         if (name.isNotEmpty() && name !in playlistNames) {
                             playlistNames = (playlistNames + name).sorted()
                             favoritesPrefs.edit().putStringSet("playlist_names", playlistNames.toSet()).apply()
+                            songForPlaylist?.let { pendingSong ->
+                                savePlaylistSongIds(name, setOf(pendingSong.id))
+                                songForPlaylist = null
+                            }
                             selectedPlaylist = name
+                            showCreatePlaylist = false
+                        } else if (name.isEmpty()) {
+                            showCreatePlaylist = false
                         }
-                        showCreatePlaylist = false
                     }) { Text("CREATE", color = Accent) }
                 },
                 dismissButton = { TextButton(onClick = { showCreatePlaylist = false }) { Text("CANCEL") } },
+                containerColor = SurfaceDark,
+                titleContentColor = Color.White,
+                textContentColor = Muted
+            )
+        }
+        if (showManagePlaylists) {
+            AlertDialog(
+                onDismissRequest = { showManagePlaylists = false },
+                title = { Text("Manage playlists") },
+                text = {
+                    Column {
+                        playlistNames.forEach { name ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(name, color = Color.White, modifier = Modifier.weight(1f), maxLines = 1)
+                                TextButton(onClick = {
+                                    playlistToRename = name
+                                    renamePlaylistName = name
+                                    showManagePlaylists = false
+                                }) { Text("RENAME", color = Accent, fontSize = 10.sp) }
+                                TextButton(onClick = {
+                                    playlistNames = playlistNames - name
+                                    favoritesPrefs.edit()
+                                        .putStringSet("playlist_names", playlistNames.toSet())
+                                        .remove("playlist_" + name)
+                                        .apply()
+                                    if (selectedPlaylist == name) selectedPlaylist = null
+                                }) { Text("DELETE", color = Color(0xFFFF6B78), fontSize = 10.sp) }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showManagePlaylists = false }) { Text("DONE", color = Accent) } },
+                containerColor = SurfaceDark,
+                titleContentColor = Color.White
+            )
+        }
+        playlistToRename?.let { oldName ->
+            AlertDialog(
+                onDismissRequest = { playlistToRename = null },
+                title = { Text("Rename playlist") },
+                text = {
+                    OutlinedTextField(value = renamePlaylistName, onValueChange = { renamePlaylistName = it }, singleLine = true, label = { Text("New name") })
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val newName = renamePlaylistName.trim()
+                        if (newName.isNotEmpty() && newName !in playlistNames) {
+                            val ids = playlistSongIds(oldName)
+                            playlistNames = (playlistNames - oldName + newName).sorted()
+                            favoritesPrefs.edit()
+                                .putStringSet("playlist_names", playlistNames.toSet())
+                                .putStringSet("playlist_" + newName, ids.map { it.toString() }.toSet())
+                                .remove("playlist_" + oldName)
+                                .apply()
+                            if (selectedPlaylist == oldName) selectedPlaylist = newName
+                        }
+                        playlistToRename = null
+                    }) { Text("SAVE", color = Accent) }
+                },
+                dismissButton = { TextButton(onClick = { playlistToRename = null }) { Text("CANCEL") } },
                 containerColor = SurfaceDark,
                 titleContentColor = Color.White,
                 textContentColor = Muted
@@ -539,7 +605,7 @@ private fun BsmMusicApp(
                                 showFavoritesOnly = false
                             }) { Text(name, color = Color.White) }
                         }
-                        TextButton(onClick = { songForPlaylist = null; newPlaylistName = ""; showCreatePlaylist = true }) { Text("+ Create new playlist", color = Accent) }
+                        TextButton(onClick = { newPlaylistName = ""; showCreatePlaylist = true }) { Text("+ Create new playlist", color = Accent) }
                     }
                 },
                 confirmButton = { TextButton(onClick = { songForPlaylist = null }) { Text("DONE", color = Accent) } },
