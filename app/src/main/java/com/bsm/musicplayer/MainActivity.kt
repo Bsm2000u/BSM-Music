@@ -291,6 +291,8 @@ private fun BsmMusicApp(
     var librarySection by remember { mutableStateOf("SONGS") }
     var selectedArtist by remember { mutableStateOf<String?>(null) }
     var selectedAlbum by remember { mutableStateOf<Long?>(null) }
+    var selectedPlaylist by remember { mutableStateOf<String?>(null) }
+    var showFavoritesOnly by remember { mutableStateOf(false) }
     var detailBackAnimating by remember { mutableStateOf(false) }
     val detailExitProgress by animateFloatAsState(targetValue = if (detailBackAnimating) 1f else 0f, animationSpec = tween(170), label = "detailBack")
     var isRefreshing by remember { mutableStateOf(false) }
@@ -369,7 +371,6 @@ private fun BsmMusicApp(
                 }?.toMap() ?: emptyMap<Long, Int>()
         )
     }
-    var showFavoritesOnly by remember { mutableStateOf(false) }
     var playlistNames by remember { mutableStateOf<List<String>>(favoritesPrefs.getStringSet("playlist_names", emptySet<String>())?.toList()?.sorted() ?: emptyList()) }
     var playlistSongCounts by remember(favoritesPrefs) {
         mutableStateOf(playlistNames.associateWith { name ->
@@ -377,7 +378,6 @@ private fun BsmMusicApp(
                 ?.count { it.toLongOrNull() != null } ?: 0
         })
     }
-    var selectedPlaylist by remember { mutableStateOf<String?>(null) }
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
     var showCreatePlaylist by remember { mutableStateOf(false) }
     var showManagePlaylists by remember { mutableStateOf(false) }
