@@ -36,7 +36,7 @@ jobs:
       - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BSM-Music-release
+          name: AUREX-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 7
@@ -46,6 +46,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: bsm-music-release-${{ github.run_number }}
-          name: BSM Music Release ${{ github.run_number }}
+          name: AUREX Release ${{ github.run_number }}
           prerelease: true
           files: app/build/outputs/apk/release/app-release.apk

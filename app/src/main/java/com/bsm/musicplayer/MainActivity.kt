@@ -79,6 +79,8 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -342,6 +344,8 @@ private fun BsmMusicApp(
     }
 
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val favoritesPrefs = remember(context) { context.getSharedPreferences("bsm_music_preferences", android.content.Context.MODE_PRIVATE) }
     var favoriteIds by remember {
         mutableStateOf(favoritesPrefs.getStringSet("favorite_song_ids", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet())
@@ -541,10 +545,10 @@ private fun BsmMusicApp(
                 }
                 Column(Modifier.weight(1f).padding(start = 11.dp)) {
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text("BSM", color = Accent, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
-                        Text(" MUSIC", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
+                        Text("AUR", color = Accent, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                        Text("EX", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
                     }
-                    Text("YOUR PERSONAL SOUNDSPACE", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
+                    Text("YOUR SOUND. YOUR SPACE.", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("LOCAL LIBRARY", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
@@ -565,6 +569,14 @@ private fun BsmMusicApp(
                 singleLine = true, shape = RoundedCornerShape(16.dp),
                 placeholder = { Text("Search songs or artists", color = Muted, fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent) },
+                trailingIcon = {
+                    IconButton(onClick = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close keyboard", tint = Accent)
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = SurfaceDark, focusedContainerColor = SurfaceDark, unfocusedContainerColor = SurfaceDark, focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Accent)
             )
             Spacer(Modifier.height(7.dp))
@@ -785,7 +797,7 @@ private fun BsmMusicApp(
                     Spacer(Modifier.height(16.dp))
                     Text("Allow music access", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    Text("BSM Music needs permission to find audio files stored on your device.", color = Muted)
+                    Text("AUREX needs permission to find audio files stored on your device.", color = Muted)
                     Spacer(Modifier.height(20.dp))
                     Button(onClick = { requestPermission { granted -> permissionGranted = granted } }) { Text("Grant permission") }
                 }
@@ -1585,7 +1597,7 @@ private fun PlayerScreen(
                 Spacer(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("NOW PLAYING", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
-                    Text("BSM MUSIC PLAYER", color = Muted, fontSize = 9.sp, letterSpacing = 1.4.sp)
+                    Text("AUREX MUSIC PLAYER", color = Muted, fontSize = 9.sp, letterSpacing = 1.4.sp)
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(
@@ -1640,7 +1652,7 @@ private fun PlayerScreen(
                             .background(Color.Black.copy(alpha = 0.68f), RoundedCornerShape(30.dp))
                             .padding(horizontal = 14.dp, vertical = 7.dp)
                     ) {
-                        Text("BSM  •  NOW PLAYING", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+                        Text("AUREX  •  NOW PLAYING", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
                     }
                 }
             }
