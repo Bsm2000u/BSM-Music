@@ -1176,6 +1176,8 @@ private fun PlayerScreen(
     var duration by remember(song.id) { mutableFloatStateOf(song.duration.toFloat().coerceAtLeast(1f)) }
     var playing by remember { mutableStateOf(player.isPlaying) }
     var isSeeking by remember { mutableStateOf(false) }
+    var showSpeedDialog by remember { mutableStateOf(false) }
+    var playbackSpeed by remember { mutableFloatStateOf(player.playbackParameters.speed) }
 
     LaunchedEffect(song.id, player) {
         while (true) {
@@ -1292,6 +1294,17 @@ private fun PlayerScreen(
                     tint = Muted,
                     onClick = onShowQueue
                 )
+                Spacer(Modifier.width(18.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    TextButton(
+                        onClick = { showSpeedDialog = true },
+                        modifier = Modifier.height(42.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                    ) {
+                        Text("${playbackSpeed}×", color = Accent, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                    Text("SPEED", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -1425,6 +1438,37 @@ private fun PlayerScreen(
             }
             Spacer(Modifier.weight(0.55f))
         }
+    }
+    if (showSpeedDialog) {
+        AlertDialog(
+            onDismissRequest = { showSpeedDialog = false },
+            containerColor = SurfaceDark,
+            titleContentColor = Color.White,
+            title = { Text("Playback speed") },
+            text = {
+                Column {
+                    listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { speed ->
+                        TextButton(
+                            onClick = {
+                                player.setPlaybackSpeed(speed)
+                                playbackSpeed = speed
+                                showSpeedDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "${speed}×",
+                                color = if (playbackSpeed == speed) Accent else Color.White,
+                                fontWeight = if (playbackSpeed == speed) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSpeedDialog = false }) { Text("CLOSE", color = Accent) }
+            }
+        )
     }
 }
 
