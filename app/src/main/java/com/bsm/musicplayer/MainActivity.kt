@@ -554,32 +554,42 @@ private fun BsmMusicApp(
             )
             Spacer(Modifier.height(7.dp))
             Row(
-                Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(15.dp))
-                    .background(Brush.horizontalGradient(listOf(AccentDeep, SurfaceRaised)))
-                    .padding(horizontal = 12.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFF54202F), AccentDeep, SurfaceDark)))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(19.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("${songs.size} TRACKS", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                Text("YOUR LIBRARY", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
-                Spacer(Modifier.width(9.dp))
-                Button(onClick = {
-                    if (songs.isNotEmpty()) {
-                        currentSong = songs.first()
-                        player.shuffleModeEnabled = false
-                        player.seekTo(0, 0L)
-                        if (player.playbackState == Player.STATE_IDLE) player.prepare()
-                        player.play()
-                        showPlayer = true
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(7.dp).background(Accent, CircleShape))
+                        Spacer(Modifier.width(6.dp))
+                        Text("YOUR COLLECTION", color = Color.White.copy(alpha = 0.9f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
                     }
-                }, enabled = songs.isNotEmpty(), shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 11.dp, vertical = 5.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background, disabledContainerColor = SurfaceRaised, disabledContentColor = Muted)
-                ) {
-                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text("PLAY", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.height(7.dp))
+                    Text("${songs.size} tracks", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(5.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("${songs.map { it.artist }.distinct().size} artists", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        Text("${songs.map { it.albumId }.distinct().size} albums", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(48.dp).background(Accent, CircleShape), contentAlignment = Alignment.Center) {
+                        IconButton(onClick = {
+                            if (songs.isNotEmpty()) {
+                                currentSong = songs.first()
+                                player.shuffleModeEnabled = false
+                                player.seekTo(0, 0L)
+                                if (player.playbackState == Player.STATE_IDLE) player.prepare()
+                                player.play()
+                                showPlayer = true
+                            }
+                        }, enabled = songs.isNotEmpty()) {
+                            Icon(Icons.Default.PlayArrow, null, tint = Background, modifier = Modifier.size(27.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text("PLAY ALL", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.6.sp)
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1540,32 +1550,39 @@ private fun PlayerScreen(
 
             Spacer(Modifier.weight(if (compactLayout) 0.12f else 0.42f))
             Box(
-                modifier = Modifier.size(artworkSize)
-                    .graphicsLayer {
-                        shadowElevation = 30f
-                        shape = RoundedCornerShape(30.dp)
-                        clip = true
-                    }
+                modifier = Modifier.size(artworkSize + 34.dp)
                     .background(
-                        Brush.linearGradient(listOf(Color(0xFFFF6478), Color(0xFF651B31), Color(0xFF24202A))),
-                        RoundedCornerShape(30.dp)
-                    )
-                    .padding(2.dp)
-                    .background(
-                        Brush.linearGradient(listOf(Color(0xFF35121D), Color(0xFF17151D))),
-                        RoundedCornerShape(28.dp)
-                    )
-                    .padding(10.dp),
+                        Brush.radialGradient(listOf(Color(0x66FF526B), Color(0x222D1420), Color.Transparent))
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                AlbumArtwork(song, Modifier.fillMaxSize().clip(RoundedCornerShape(21.dp)))
                 Box(
-                    Modifier.align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp)
-                        .background(Color.Black.copy(alpha = 0.62f), RoundedCornerShape(30.dp))
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                    modifier = Modifier.size(artworkSize)
+                        .graphicsLayer {
+                            shadowElevation = 34f
+                            shape = RoundedCornerShape(30.dp)
+                            clip = true
+                        }
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFFFFA0A9), Color(0xFFFF3658), Color(0xFF651B31), Color(0xFF24202A))),
+                            RoundedCornerShape(30.dp)
+                        )
+                        .padding(2.dp)
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF35121D), Color(0xFF17151D))),
+                            RoundedCornerShape(28.dp)
+                        )
+                        .padding(9.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("NOW PLAYING  •  BSM", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                    AlbumArtwork(song, Modifier.fillMaxSize().clip(RoundedCornerShape(21.dp)))
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
+                            .background(Color.Black.copy(alpha = 0.68f), RoundedCornerShape(30.dp))
+                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        Text("BSM  •  NOW PLAYING", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
+                    }
                 }
             }
 
@@ -1593,7 +1610,10 @@ private fun PlayerScreen(
             PlaybackVisualizer(isPlaying = playing)
             Spacer(Modifier.height(if (compactLayout) 4.dp else 8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(SurfaceDark.copy(alpha = 0.82f))
+                    .padding(horizontal = 5.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1621,7 +1641,7 @@ private fun PlayerScreen(
                         modifier = Modifier.height(42.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                     ) {
-                        Text("${playbackSpeed}×", color = Accent, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("${playbackSpeed}×", color = Accent, fontWeight = FontWeight.Black, fontSize = 16.sp)
                     }
                     Text("SPEED", color = Muted, fontSize = 8.sp, letterSpacing = 0.8.sp, fontWeight = FontWeight.Bold)
                 }
