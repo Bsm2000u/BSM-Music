@@ -19,6 +19,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -711,6 +715,17 @@ private fun BsmMusicApp(
                     }
                 }
             }
+            AnimatedContent(
+                targetState = librarySection,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(280)) +
+                        slideInHorizontally(animationSpec = tween(320)) { fullWidth -> fullWidth / 7 }) togetherWith
+                        (fadeOut(animationSpec = tween(180)) +
+                            slideOutHorizontally(animationSpec = tween(260)) { fullWidth -> -fullWidth / 10 })
+                },
+                label = "libraryTabTransition",
+                modifier = Modifier.fillMaxWidth().weight(1f)
+            ) { animatedSection ->
             if (!permissionGranted) {
                 Column(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(54.dp))
@@ -748,8 +763,8 @@ private fun BsmMusicApp(
                             when {
                                 isEmptyPlaylist -> "${activePlaylistName} is empty"
                                 showFavoritesOnly -> "No favorites yet"
-                                librarySection == "RECENT" -> "Nothing played yet"
-                                librarySection == "TOP" -> "No play statistics yet"
+                                animatedSection == "RECENT" -> "Nothing played yet"
+                                animatedSection == "TOP" -> "No play statistics yet"
                                 else -> "No matching songs"
                             },
                             color = Color.White, fontWeight = FontWeight.Bold
@@ -759,8 +774,8 @@ private fun BsmMusicApp(
                             when {
                                 isEmptyPlaylist -> "Add songs from your library using the playlist button."
                                 showFavoritesOnly -> "Tap the heart on a song to save it here"
-                                librarySection == "RECENT" -> "Your recently played tracks will appear here."
-                                librarySection == "TOP" -> "Play some music and your most played tracks will appear here."
+                                animatedSection == "RECENT" -> "Your recently played tracks will appear here."
+                                animatedSection == "TOP" -> "Play some music and your most played tracks will appear here."
                                 else -> "Try another song or artist name"
                             },
                             color = Muted, fontSize = 12.sp
@@ -781,7 +796,7 @@ private fun BsmMusicApp(
                         }
                     }
                 }
-            } else if (selectedArtist == null && selectedAlbum == null && librarySection == "ARTISTS") {
+            } else if (selectedArtist == null && selectedAlbum == null && animatedSection == "ARTISTS") {
                 val artists = visibleSongs.map { it.artist }.distinct().sortedBy { it.lowercase() }
                 val artistRows = artists.chunked(2)
                 LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
@@ -803,7 +818,7 @@ private fun BsmMusicApp(
                         }
                     }
                 }
-            } else if (selectedArtist == null && selectedAlbum == null && librarySection == "ALBUMS") {
+            } else if (selectedArtist == null && selectedAlbum == null && animatedSection == "ALBUMS") {
                 val albums = visibleSongs.distinctBy { it.albumId }.sortedBy { it.album.lowercase() }
                 val albumRows = albums.chunked(2)
                 LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
@@ -1005,10 +1020,11 @@ private fun BsmMusicApp(
                             onAddToPlaylist = { songForPlaylist = song },
                             onAddToQueue = { addSongToQueueNext(song) },
                             onAddToQueueEnd = { addSongToQueueEnd(song) },
-                            extraLabel = if (librarySection == "TOP") "${playCounts[song.id] ?: 0} PLAYS" else null
+                            extraLabel = if (animatedSection == "TOP") "${playCounts[song.id] ?: 0} PLAYS" else null
                         )
                     }
                 }
+            }
             }
             val miniDuration = currentSong?.duration ?: 0L
             val miniProgress = if (miniDuration > 0L) (playbackPosition.toFloat() / miniDuration.toFloat()).coerceIn(0f, 1f) else 0f
