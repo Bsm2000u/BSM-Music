@@ -102,6 +102,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Request the Galaxy A51's native 60 Hz display mode when available.
+        window.attributes = window.attributes.apply { preferredRefreshRate = 60f }
         permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             permissionCallback?.invoke(granted)
             permissionCallback = null
