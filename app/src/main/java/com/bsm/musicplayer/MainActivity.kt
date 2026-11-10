@@ -727,7 +727,7 @@ private fun BsmMusicApp(
                 modifier = Modifier.fillMaxWidth().weight(1f)
             ) { animatedSection ->
             if (!permissionGranted) {
-                Column(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Column(Modifier.fillMaxWidth().background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(54.dp))
                     Spacer(Modifier.height(16.dp))
                     Text("Allow music access", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -750,7 +750,7 @@ private fun BsmMusicApp(
                 val activePlaylistName = selectedPlaylist
                 val isEmptyPlaylist = activePlaylistName != null &&
                     playlistSongIds(activePlaylistName).isEmpty() && searchQuery.isBlank()
-                Box(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().background(SurfaceDark, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
                         Icon(
                             if (isEmptyPlaylist) Icons.Default.MusicNote else Icons.Default.Search,
@@ -799,7 +799,7 @@ private fun BsmMusicApp(
             } else if (selectedArtist == null && selectedAlbum == null && animatedSection == "ARTISTS") {
                 val artists = visibleSongs.map { it.artist }.distinct().sortedBy { it.lowercase() }
                 val artistRows = artists.chunked(2)
-                LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
+                LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
                     items(artistRows) { artistRow ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                             artistRow.forEach { artist ->
@@ -1010,7 +1010,7 @@ private fun BsmMusicApp(
                     }
                 }
                 val songListState = rememberLazyListState()
-                LazyColumn(state = songListState, modifier = Modifier.weight(1f).graphicsLayer { alpha = 1f - detailExitProgress; translationX = 64f * detailExitProgress }, verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
+                LazyColumn(state = songListState, modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - detailExitProgress; translationX = 64f * detailExitProgress }, verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
                     items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
                         SongRow(
                             song = song,
