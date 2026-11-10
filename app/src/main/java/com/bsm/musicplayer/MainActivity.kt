@@ -267,6 +267,7 @@ private fun BsmMusicApp(
     var songs by remember { mutableStateOf(emptyList<Song>()) }
     var currentSong by remember { mutableStateOf<Song?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
+    var playbackPosition by remember { mutableLongStateOf(0L) }
     var showPlayer by remember { mutableStateOf(false) }
     var sleepTimerMinutes by remember { mutableIntStateOf(0) }
     var sleepTimerRemaining by remember { mutableLongStateOf(0L) }
@@ -290,6 +291,13 @@ private fun BsmMusicApp(
             selectedArtist != null -> selectedArtist = null
         }
     }
+    LaunchedEffect(player, isPlaying, currentSong) {
+        while (true) {
+            playbackPosition = player.currentPosition.coerceAtLeast(0L)
+            kotlinx.coroutines.delay(if (isPlaying) 500L else 1000L)
+        }
+    }
+
     LaunchedEffect(sleepTimerMinutes, player) {
         if (sleepTimerMinutes > 0) {
             val deadline = System.currentTimeMillis() + sleepTimerMinutes * 60_000L
@@ -918,15 +926,71 @@ private fun BsmMusicApp(
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 8.dp).background(SurfaceRaised, RoundedCornerShape(20.dp)).clickable { if (currentSong != null) showPlayer = true }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (currentSong != null) AlbumArtwork(currentSong!!, Modifier.size(42.dp))
-                else Box(Modifier.size(42.dp).background(AccentDeep, RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(23.dp)) }
-                Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text(currentSong?.title ?: "Nothing playing", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    Text(currentSong?.artist ?: "Choose a song to get started", color = Muted, fontSize = 11.sp, maxLines = 1)
-                }
-                IconButton(onClick = { if (player.isPlaying) player.pause() else if (currentSong != null) player.play() }) {
-                    Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play or pause", tint = Accent, modifier = Modifier.size(29.dp))
+            val miniDuration = currentSong?.duration ?: 0L
+            val miniProgress = if (miniDuration > 0L) (playbackPosition.toFloat() / miniDuration.toFloat()).coerceIn(0f, 1f) else 0f
+            Box(
+                Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 8.dp)
+                    .clip(RoundedCornerShape(19.dp))
+                    .background(Brush.linearGradient(listOf(SurfaceRaised, SurfaceDark)))
+                    .clickable { if (currentSong != null) showPlayer = true }
+            ) {
+                Column {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 11.dp, end = 7.dp, top = 9.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box {
+                            if (currentSong != null) AlbumArtwork(currentSong!!, Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))
+                            else Box(Modifier.size(48.dp).background(AccentDeep, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(24.dp))
+                            }
+                            if (isPlaying) Box(
+                                Modifier.align(Alignment.BottomEnd).padding(3.dp).size(7.dp)
+                                    .background(Accent, CircleShape)
+                            )
+                        }
+                        Column(Modifier.weight(1f).padding(start = 11.dp, end = 5.dp)) {
+                            Text(
+                                if (isPlaying) "NOW PLAYING" else "PLAYER",
+                                color = Accent, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.1.sp
+                            )
+                            Text(currentSong?.title ?: "Nothing playing", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(currentSong?.artist ?: "Choose a song to get started", color = Muted, fontSize = 10.sp, maxLines = 1)
+                        }
+                        IconButton(
+                            onClick = { player.seekToPreviousMediaItem() },
+                            enabled = currentSong != null,
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = if (currentSong != null) Muted else Muted.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
+                        }
+                        IconButton(
+                            onClick = { if (player.isPlaying) player.pause() else if (currentSong != null) player.play() },
+                            enabled = currentSong != null,
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Icon(
+                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = "Play or pause",
+                                tint = Accent,
+                                modifier = Modifier.size(29.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { player.seekToNextMediaItem() },
+                            enabled = currentSong != null,
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = if (currentSong != null) Muted else Muted.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().height(2.dp).background(Color.White.copy(alpha = 0.07f))) {
+                        Box(
+                            Modifier.fillMaxWidth(miniProgress).height(2.dp)
+                                .background(Brush.horizontalGradient(listOf(AccentDeep, Accent)))
+                        )
+                    }
                 }
             }
         }
