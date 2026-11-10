@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -582,24 +583,54 @@ private fun BsmMusicApp(
                 onDismissRequest = { showManagePlaylists = false },
                 title = { Text("Manage playlists") },
                 text = {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         playlistNames.forEach { name ->
-                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(name, color = Color.White, modifier = Modifier.weight(1f), maxLines = 1)
-                                TextButton(onClick = {
-                                    playlistToRename = name
-                                    renamePlaylistName = name
-                                    showManagePlaylists = false
-                                }) { Text("RENAME", color = Accent, fontSize = 10.sp) }
-                                TextButton(onClick = {
-                                    playlistNames = playlistNames - name
-                                    favoritesPrefs.edit()
-                                        .putStringSet("playlist_names", playlistNames.toSet())
-                                        .remove("playlist_" + name)
-                                        .apply()
-                                    playlistSongCounts = playlistSongCounts - name
-                                    if (selectedPlaylist == name) selectedPlaylist = null
-                                }) { Text("DELETE", color = Color(0xFFFF6B78), fontSize = 10.sp) }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(SurfaceRaised, RoundedCornerShape(14.dp))
+                                    .padding(start = 12.dp, end = 4.dp, top = 5.dp, bottom = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        name,
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        "${playlistSongCounts[name] ?: 0} songs",
+                                        color = Muted,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                                TextButton(
+                                    onClick = {
+                                        playlistToRename = name
+                                        renamePlaylistName = name
+                                        showManagePlaylists = false
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 7.dp, vertical = 5.dp)
+                                ) { Text("RENAME", color = Accent, fontSize = 9.sp) }
+                                TextButton(
+                                    onClick = {
+                                        playlistNames = playlistNames - name
+                                        favoritesPrefs.edit()
+                                            .putStringSet("playlist_names", playlistNames.toSet())
+                                            .remove("playlist_" + name)
+                                            .apply()
+                                        playlistSongCounts = playlistSongCounts - name
+                                        if (selectedPlaylist == name) selectedPlaylist = null
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 7.dp, vertical = 5.dp)
+                                ) { Text("DELETE", color = Color(0xFFFF6B78), fontSize = 9.sp) }
                             }
                         }
                     }
