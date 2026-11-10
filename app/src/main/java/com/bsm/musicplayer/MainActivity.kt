@@ -41,6 +41,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -288,74 +289,79 @@ private fun BsmMusicApp(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 22.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("BSM", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 4.sp)
-                    Text("MUSIC", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 2.5.sp)
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("YOUR MUSIC. YOUR RULES.", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("BSM", color = Accent, fontSize = 29.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(" MUSIC", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                    }
                 }
-                IconButton(onClick = { }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
-                Text("YOUR LIBRARY", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = { sortByArtist = !sortByArtist }) {
-                    Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp)
-                }
-                IconButton(onClick = { refreshLibrary() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
+                Box(Modifier.size(46.dp).background(SurfaceDark, CircleShape), contentAlignment = Alignment.Center) {
+                    IconButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) {
+                        if (isRefreshing) CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                        else Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
+                    }
                 }
             }
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                singleLine = true,
-                placeholder = { Text("Search songs or artists", color = Muted) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = Muted) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Accent,
-                    unfocusedBorderColor = SurfaceDark,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = Accent
-                )
+                value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth(),
+                singleLine = true, shape = RoundedCornerShape(18.dp),
+                placeholder = { Text("Search songs or artists", color = Muted, fontSize = 14.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent) },
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = SurfaceDark, focusedContainerColor = SurfaceDark, unfocusedContainerColor = SurfaceDark, focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Accent)
             )
-
+            Spacer(Modifier.height(16.dp))
+            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(AccentDeep, SurfaceRaised))).padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("YOUR SOUNDTRACK", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("${songs.size}", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black)
+                        Text(if (songs.size == 1) "TRACK IN YOUR LIBRARY" else "TRACKS IN YOUR LIBRARY", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Spacer(Modifier.height(15.dp))
+                        Button(onClick = {
+                            if (songs.isNotEmpty()) {
+                                currentSong = songs.first()
+                                player.shuffleModeEnabled = false
+                                player.seekTo(0, 0L)
+                                if (player.playbackState == Player.STATE_IDLE) player.prepare()
+                                player.play()
+                                showPlayer = true
+                            }
+                        }, enabled = songs.isNotEmpty(), shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background, disabledContainerColor = SurfaceRaised, disabledContentColor = Muted)) {
+                            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text("PLAY ALL", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                        }
+                    }
+                    Box(Modifier.size(88.dp).background(Color.White.copy(alpha = 0.06f), CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(48.dp))
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("YOUR LIBRARY", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                    Text("${visibleSongs.size} SONGS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                }
+                TextButton(onClick = { sortByArtist = !sortByArtist }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
+                    Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
             if (!permissionGranted) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
+                Column(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(54.dp))
                     Spacer(Modifier.height(16.dp))
                     Text("Allow music access", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Text("BSM Music needs permission to find audio files stored on your device.", color = Muted)
                     Spacer(Modifier.height(20.dp))
-                    Button(onClick = {
-                        requestPermission { granted -> permissionGranted = granted }
-                    }) { Text("Grant permission") }
+                    Button(onClick = { requestPermission { granted -> permissionGranted = granted } }) { Text("Grant permission") }
                 }
             } else if (songs.isEmpty()) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
+                Column(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(54.dp))
                     Spacer(Modifier.height(16.dp))
                     Text("Your sound. Your space.", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
@@ -364,48 +370,34 @@ private fun BsmMusicApp(
                     Spacer(Modifier.height(16.dp))
                     TextButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) { Text(if (isRefreshing) "Refreshing…" else "Refresh library") }
                 }
-            } else {
-                val songListState = rememberLazyListState()
-                LazyColumn(
-                    state = songListState,
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    contentPadding = PaddingValues(bottom = 14.dp)
-                ) {
-                    items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
-                        SongRow(song = song, onSongClick = onSongClick)
+            } else if (visibleSongs.isEmpty()) {
+                Box(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                        Icon(Icons.Default.Search, null, tint = Muted, modifier = Modifier.size(38.dp))
+                        Spacer(Modifier.height(10.dp))
+                        Text("No matching songs", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Try another song or artist name", color = Muted, fontSize = 12.sp)
                     }
                 }
+            } else {
+                val songListState = rememberLazyListState()
+                LazyColumn(state = songListState, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
+                    items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song -> SongRow(song = song, onSongClick = onSongClick) }
+                }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp)
-                    .background(SurfaceRaised, RoundedCornerShape(20.dp))
-                    .clickable { if (currentSong != null) showPlayer = true }.padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 8.dp).background(SurfaceRaised, RoundedCornerShape(20.dp)).clickable { if (currentSong != null) showPlayer = true }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(42.dp).background(AccentDeep, RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(23.dp)) }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(currentSong?.title ?: "Nothing playing", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Text(currentSong?.artist ?: "Choose a song to get started", color = Muted, fontSize = 11.sp, maxLines = 1)
                 }
-                IconButton(onClick = {
-                    if (player.isPlaying) player.pause()
-                    else if (currentSong != null) player.play()
-                }) {
+                IconButton(onClick = { if (player.isPlaying) player.pause() else if (currentSong != null) player.play() }) {
                     Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play or pause", tint = Accent, modifier = Modifier.size(29.dp))
                 }
             }
         }
-
         if (showPlayer && currentSong != null) {
-            PlayerScreen(
-                song = currentSong!!,
-                player = player,
-                onClose = { showPlayer = false },
-                onPrevious = { player.seekToPreviousMediaItem() },
-                onNext = { player.seekToNextMediaItem() }
-            )
+            PlayerScreen(song = currentSong!!, player = player, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() })
         }
     }
 }
