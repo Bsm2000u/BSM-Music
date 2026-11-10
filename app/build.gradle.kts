@@ -22,6 +22,8 @@ android {
 
     buildTypes {
         release {
+            // Use the same debug certificate so optimized test APKs can update existing installs.
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
