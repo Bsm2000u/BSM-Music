@@ -395,7 +395,7 @@ private fun BsmMusicApp(
                         selectedLabelColor = Color.White,
                         labelColor = Muted,
                         selectedLeadingIconColor = Accent,
-                        leadingIconColor = Muted
+                        iconColor = Muted
                     ),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true, selected = showFavoritesOnly,
