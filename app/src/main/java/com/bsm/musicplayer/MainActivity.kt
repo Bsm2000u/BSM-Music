@@ -1312,8 +1312,45 @@ private fun PlayerScreen(
                     inactiveTrackColor = Color.White.copy(alpha = 0.14f)
                 )
             )
-            Row(Modifier.fillMaxWidth().padding(horizontal = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatTime(position.toLong()), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    formatTime(position.toLong()),
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "−10s",
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .background(SurfaceDark, RoundedCornerShape(20.dp))
+                        .clickable {
+                            player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L))
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "+10s",
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .background(SurfaceDark, RoundedCornerShape(20.dp))
+                        .clickable {
+                            val totalDuration = player.duration.takeIf { it > 0L }
+                            val target = player.currentPosition + 10_000L
+                            player.seekTo(totalDuration?.let { target.coerceAtMost(it) } ?: target)
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+                Spacer(Modifier.weight(1f))
                 Text(formatTime(duration.toLong()), color = Muted, fontSize = 11.sp)
             }
 
