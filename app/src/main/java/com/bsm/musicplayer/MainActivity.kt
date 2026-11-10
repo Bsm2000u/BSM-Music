@@ -195,9 +195,19 @@ private fun BsmMusicApp(
             finally { isRefreshing = false }
         }
     }
+    // Build MediaItems once per library refresh instead of rebuilding the full playlist on every tap.
+    val mediaItems = remember(songs) {
+        songs.map { MediaItem.fromUri(it.uri) }
+    }
     val visibleSongs = remember(songs, searchQuery, sortByArtist) {
-        songs.filter { it.title.contains(searchQuery, true) || it.artist.contains(searchQuery, true) }
-            .let { list -> if (sortByArtist) list.sortedBy { it.artist.lowercase() } else list.sortedBy { it.title.lowercase() } }
+        val filtered = if (searchQuery.isBlank()) songs else {
+            songs.filter { it.title.contains(searchQuery, true) || it.artist.contains(searchQuery, true) }
+        }
+        if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
+    }
+
+    LaunchedEffect(mediaItems) {
+        player.setMediaItems(mediaItems)
     }
 
     DisposableEffect(player, songs) {
@@ -303,15 +313,14 @@ private fun BsmMusicApp(
                     verticalArrangement = Arrangement.spacedBy(9.dp),
                     contentPadding = PaddingValues(bottom = 14.dp)
                 ) {
-                    items(visibleSongs, key = { it.id }) { song ->
+                    items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
                         Row(
                             modifier = Modifier.fillMaxWidth()
                                 .background(SurfaceDark, RoundedCornerShape(16.dp))
                                 .clickable {
                                     currentSong = song
-                                    player.setMediaItems(songs.map { MediaItem.fromUri(it.uri) })
                                     player.seekTo(songs.indexOf(song).coerceAtLeast(0), 0L)
-                                    player.prepare()
+                                    if (player.playbackState == Player.STATE_IDLE) player.prepare()
                                     player.play()
                                     showPlayer = true
                                 }.padding(13.dp),
