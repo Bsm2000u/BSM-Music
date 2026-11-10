@@ -830,96 +830,146 @@ private fun BsmMusicApp(
                 }
             } else {
                 val detailAlbumSong = selectedAlbum?.let { albumId -> visibleSongs.firstOrNull { it.albumId == albumId } }
+                val detailArtworkSong = detailAlbumSong ?: visibleSongs.firstOrNull()
                 if (selectedArtist != null || detailAlbumSong != null) {
+                    val totalDuration = formatTime(visibleSongs.sumOf { it.duration })
+                    val albumCount = visibleSongs.map { it.albumId }.distinct().size
                     Column(
                         modifier = Modifier.fillMaxWidth()
                             .padding(bottom = 12.dp)
-                            .background(
-                                Brush.linearGradient(listOf(AccentDeep, SurfaceDark)),
-                                RoundedCornerShape(22.dp)
-                            )
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Brush.linearGradient(listOf(AccentDeep, SurfaceRaised, SurfaceDark)))
                             .padding(15.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (detailAlbumSong != null) {
-                                AlbumArtwork(detailAlbumSong, Modifier.size(82.dp))
-                            } else {
+                            Box(
+                                Modifier.size(124.dp).clip(RoundedCornerShape(19.dp))
+                                    .background(SurfaceDark)
+                            ) {
+                                if (detailArtworkSong != null) {
+                                    AlbumArtwork(detailArtworkSong, Modifier.fillMaxSize())
+                                } else {
+                                    Icon(Icons.Default.Person, null, tint = Accent, modifier = Modifier.align(Alignment.Center).size(54.dp))
+                                }
                                 Box(
-                                    Modifier.size(82.dp).background(SurfaceRaised, RoundedCornerShape(18.dp)),
-                                    contentAlignment = Alignment.Center
+                                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.82f))))
+                                        .padding(horizontal = 8.dp, vertical = 7.dp)
                                 ) {
-                                    Icon(Icons.Default.Person, null, tint = Accent, modifier = Modifier.size(42.dp))
+                                    Text(
+                                        if (detailAlbumSong != null) "ALBUM COVER" else "ARTIST PROFILE",
+                                        color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.ExtraBold,
+                                        letterSpacing = 0.8.sp
+                                    )
                                 }
                             }
                             Column(Modifier.weight(1f).padding(start = 14.dp)) {
                                 Text(
-                                    if (detailAlbumSong != null) "ALBUM" else "ARTIST",
-                                    color = Accent,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 1.7.sp
+                                    if (detailAlbumSong != null) "ALBUM COLLECTION" else "ARTIST COLLECTION",
+                                    color = Accent, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.2.sp
+                                )
+                                Spacer(Modifier.height(7.dp))
+                                Text(
+                                    detailAlbumSong?.album ?: selectedArtist.orEmpty(),
+                                    color = Color.White, fontSize = 18.sp, lineHeight = 22.sp,
+                                    fontWeight = FontWeight.ExtraBold, maxLines = 3
                                 )
                                 Spacer(Modifier.height(5.dp))
                                 Text(
-                                    detailAlbumSong?.album ?: selectedArtist.orEmpty(),
-                                    color = Color.White,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    maxLines = 2
+                                    if (detailAlbumSong != null) detailAlbumSong.artist else selectedArtist.orEmpty(),
+                                    color = Muted, fontSize = 11.sp, maxLines = 1
                                 )
-                                Text(
-                                    if (detailAlbumSong != null) detailAlbumSong.artist else "${visibleSongs.size} songs · ${visibleSongs.map { it.albumId }.distinct().size} albums",
-                                    color = Muted,
-                                    fontSize = 11.sp,
-                                    maxLines = 1
-                                )
+                                Spacer(Modifier.height(9.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(
+                                        Modifier.clip(RoundedCornerShape(9.dp)).background(Color.Black.copy(alpha = 0.22f))
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("${visibleSongs.size}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                                        Text("TRACKS", color = Muted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    if (selectedArtist != null) {
+                                        Column(
+                                            Modifier.clip(RoundedCornerShape(9.dp)).background(Color.Black.copy(alpha = 0.22f))
+                                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                                        ) {
+                                            Text("$albumCount", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+                                            Text("ALBUMS", color = Muted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Column(
+                                        Modifier.clip(RoundedCornerShape(9.dp)).background(Color.Black.copy(alpha = 0.22f))
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(totalDuration, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                                        Text("DURATION", color = Muted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
                         }
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(15.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             Button(
                                 onClick = { playCollection(visibleSongs, false) },
                                 enabled = visibleSongs.isNotEmpty(),
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(13.dp),
-                                contentPadding = PaddingValues(vertical = 10.dp),
+                                modifier = Modifier.weight(1f).height(45.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = PaddingValues(vertical = 8.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background)
                             ) {
-                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(17.dp))
-                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(19.dp))
+                                Spacer(Modifier.width(5.dp))
                                 Text("PLAY ALL", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                             }
                             OutlinedButton(
                                 onClick = { playCollection(visibleSongs, true) },
                                 enabled = visibleSongs.isNotEmpty(),
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(13.dp),
-                                contentPadding = PaddingValues(vertical = 10.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Accent.copy(alpha = 0.65f))
+                                modifier = Modifier.weight(1f).height(45.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = PaddingValues(vertical = 8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Accent.copy(alpha = 0.7f))
                             ) {
-                                Icon(Icons.Default.Shuffle, null, tint = Accent, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.Shuffle, null, tint = Accent, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(5.dp))
                                 Text("SHUFFLE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
                         if (selectedArtist != null && selectedAlbum == null) {
                             val artistAlbums = visibleSongs.distinctBy { it.albumId }.sortedBy { it.album.lowercase() }
                             if (artistAlbums.isNotEmpty()) {
-                                Spacer(Modifier.height(15.dp))
-                                Text("ALBUMS BY THIS ARTIST", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(19.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("DISCOGRAPHY", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                                    Spacer(Modifier.width(7.dp))
+                                    Text("${artistAlbums.size} ALBUMS", color = Accent, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(10.dp))
                                 Row(
                                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     artistAlbums.forEach { albumSong ->
+                                        val albumTrackCount = visibleSongs.count { it.albumId == albumSong.albumId }
                                         Column(
-                                            Modifier.width(104.dp).clickable { selectedAlbum = albumSong.albumId }
+                                            Modifier.width(116.dp).clip(RoundedCornerShape(15.dp))
+                                                .background(Color.Black.copy(alpha = 0.2f))
+                                                .clickable { selectedAlbum = albumSong.albumId }
+                                                .padding(7.dp)
                                         ) {
-                                            AlbumArtwork(albumSong, Modifier.fillMaxWidth().height(88.dp))
-                                            Spacer(Modifier.height(5.dp))
-                                            Text(albumSong.album, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                                            Text("${visibleSongs.count { it.albumId == albumSong.albumId }} tracks", color = Muted, fontSize = 9.sp)
+                                            Box {
+                                                AlbumArtwork(albumSong, Modifier.fillMaxWidth().height(102.dp).clip(RoundedCornerShape(11.dp)))
+                                                Box(
+                                                    Modifier.align(Alignment.BottomEnd).padding(5.dp)
+                                                        .background(AccentDeep, RoundedCornerShape(6.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                                                ) {
+                                                    Text("$albumTrackCount", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                                                }
+                                            }
+                                            Spacer(Modifier.height(7.dp))
+                                            Text(albumSong.album, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 2, minLines = 2)
+                                            Text("OPEN ALBUM", color = Accent, fontSize = 7.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
                                         }
                                     }
                                 }
