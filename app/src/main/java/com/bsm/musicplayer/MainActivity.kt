@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,10 +51,16 @@ data class Song(val id: Long, val title: String, val artist: String, val uri: Ur
 
 class MainActivity : ComponentActivity() {
     private var player: ExoPlayer? = null
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private var permissionCallback: ((Boolean) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            permissionCallback?.invoke(granted)
+            permissionCallback = null
+        }
         player = ExoPlayer.Builder(this).build()
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(
@@ -83,14 +90,6 @@ class MainActivity : ComponentActivity() {
     private fun requestAudioPermission(callback: (Boolean) -> Unit) {
         permissionCallback = callback
         permissionLauncher.launch(audioPermission())
-    }
-
-    private var permissionCallback: ((Boolean) -> Unit)? = null
-    private val permissionLauncher by lazy {
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            permissionCallback?.invoke(granted)
-            permissionCallback = null
-        }
     }
 
     private fun loadDeviceSongs(): List<Song> {
