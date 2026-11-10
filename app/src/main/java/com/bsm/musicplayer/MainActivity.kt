@@ -288,7 +288,6 @@ private fun BsmMusicApp(
     var queueTracks by remember { mutableStateOf(emptyList<Pair<Int, Song>>()) }
     var queueCurrentIndex by remember { mutableIntStateOf(-1) }
     var searchQuery by remember { mutableStateOf("") }
-    var sortByArtist by remember { mutableStateOf(false) }
     var librarySection by remember { mutableStateOf("SONGS") }
     var selectedArtist by remember { mutableStateOf<String?>(null) }
     var selectedAlbum by remember { mutableStateOf<Long?>(null) }
@@ -311,11 +310,18 @@ private fun BsmMusicApp(
     }
 
     BackHandler(
-        enabled = showQueue || showPlayer || ((selectedAlbum != null || selectedArtist != null) && !detailBackAnimating)
+        enabled = showQueue || showPlayer || selectedPlaylist != null ||
+            ((selectedAlbum != null || selectedArtist != null) && !detailBackAnimating)
     ) {
         when {
             showQueue -> showQueue = false
             showPlayer -> showPlayer = false
+            selectedPlaylist != null -> {
+                selectedPlaylist = null
+                showFavoritesOnly = false
+                searchQuery = ""
+                librarySection = "SONGS"
+            }
             selectedAlbum != null || selectedArtist != null -> detailBackAnimating = true
         }
     }
@@ -402,7 +408,7 @@ private fun BsmMusicApp(
     }
     val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
     var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
-    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames, selectedArtist, selectedAlbum, recentSongIds, playCounts, librarySection) {
+    LaunchedEffect(songs, searchQuery, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames, selectedArtist, selectedAlbum, recentSongIds, playCounts, librarySection) {
         val queryWords = normalizeSearchText(searchQuery).split(' ').filter { it.isNotBlank() }
         val activePlaylist = selectedPlaylist
         visibleSongs = withContext(Dispatchers.Default) {
@@ -422,7 +428,7 @@ private fun BsmMusicApp(
                 }
                 "TOP" -> filtered.filter { (playCounts[it.id] ?: 0) > 0 }
                     .sortedWith(compareByDescending<Song> { playCounts[it.id] ?: 0 }.thenBy { it.title.lowercase() })
-                else -> if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
+                else -> filtered
             }
         }
     }
@@ -548,11 +554,9 @@ private fun BsmMusicApp(
                         Text("AUR", color = Accent, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
                         Text("EX", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
                     }
-                    Text("YOUR SOUND. YOUR SPACE.", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("LOCAL LIBRARY", color = Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
-                    Text("${songs.size} TRACKS", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
                 }
                 Spacer(Modifier.width(5.dp))
                 IconButton(
@@ -579,27 +583,16 @@ private fun BsmMusicApp(
                 },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = SurfaceDark, focusedContainerColor = SurfaceDark, unfocusedContainerColor = SurfaceDark, focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Accent)
             )
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(selectedArtist ?: (selectedAlbum?.let { id -> songs.firstOrNull { it.albumId == id }?.album } ?: "YOUR LIBRARY"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, maxLines = 1)
-                    Text(
-                        when (librarySection) {
-                            "ARTISTS" -> "${visibleSongs.map { it.artist }.distinct().size} ARTISTS"
-                            "ALBUMS" -> "${visibleSongs.map { it.albumId }.distinct().size} ALBUMS"
-                            "PLAYLIST" -> "${playlistNames.size} PLAYLISTS"
-                            "RECENT" -> "${visibleSongs.size} RECENT TRACKS"
-                            else -> "${visibleSongs.size} SONGS"
-                        },
-                        color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp
-                    )
-                }
+            Row(Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    selectedArtist ?: (selectedAlbum?.let { id -> songs.firstOrNull { it.albumId == id }?.album } ?: "YOUR LIBRARY"),
+                    color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.8.sp, maxLines = 1
+                )
+                Spacer(Modifier.weight(1f))
                 if (selectedArtist != null || selectedAlbum != null) {
                     TextButton(onClick = { if (!detailBackAnimating) detailBackAnimating = true }) {
                         Text("BACK", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                } else if (librarySection == "SONGS") {
-                    TextButton(onClick = { sortByArtist = !sortByArtist }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
-                        Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -609,7 +602,7 @@ private fun BsmMusicApp(
             ) {
                 FilterChip(
                     selected = !showFavoritesOnly,
-                    onClick = { showFavoritesOnly = false },
+                    onClick = { showFavoritesOnly = false; selectedPlaylist = null; searchQuery = "" },
                     label = { Text("ALL SONGS", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = AccentDeep,
@@ -770,6 +763,7 @@ private fun BsmMusicApp(
                                         .clickable {
                                             selectedPlaylist = name
                                             showFavoritesOnly = false
+                                            searchQuery = ""
                                             librarySection = "SONGS"
                                         }
                                         .padding(horizontal = 13.dp, vertical = 12.dp),
@@ -1024,69 +1018,34 @@ private fun BsmMusicApp(
             }
             val miniDuration = currentSong?.duration ?: 0L
             val miniProgress = if (miniDuration > 0L) (playbackPosition.toFloat() / miniDuration.toFloat()).coerceIn(0f, 1f) else 0f
-            Box(
-                Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 8.dp)
-                    .clip(RoundedCornerShape(19.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 5.dp)
+                    .height(54.dp).clip(RoundedCornerShape(15.dp))
                     .background(Brush.linearGradient(listOf(SurfaceRaised, SurfaceDark)))
                     .clickable { if (currentSong != null) showPlayer = true }
+                    .padding(start = 9.dp, end = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Row(
-                        Modifier.fillMaxWidth().padding(start = 11.dp, end = 7.dp, top = 9.dp, bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box {
-                            if (currentSong != null) AlbumArtwork(currentSong!!, Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))
-                            else Box(Modifier.size(48.dp).background(AccentDeep, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(24.dp))
-                            }
-                            if (isPlaying) Box(
-                                Modifier.align(Alignment.BottomEnd).padding(3.dp).size(7.dp)
-                                    .background(Accent, CircleShape)
-                            )
-                        }
-                        Column(Modifier.weight(1f).padding(start = 11.dp, end = 5.dp)) {
-                            Text(
-                                if (isPlaying) "NOW PLAYING" else "PLAYER",
-                                color = Accent, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 1.1.sp
-                            )
-                            Text(currentSong?.title ?: "Nothing playing", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                            Text(currentSong?.artist ?: "Choose a song to get started", color = Muted, fontSize = 10.sp, maxLines = 1)
-                        }
-                        IconButton(
-                            onClick = { player.seekToPreviousMediaItem() },
-                            enabled = currentSong != null,
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = if (currentSong != null) Muted else Muted.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
-                        }
-                        IconButton(
-                            onClick = { if (player.isPlaying) player.pause() else if (currentSong != null) player.play() },
-                            enabled = currentSong != null,
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Icon(
-                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = "Play or pause",
-                                tint = Accent,
-                                modifier = Modifier.size(29.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = { player.seekToNextMediaItem() },
-                            enabled = currentSong != null,
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = if (currentSong != null) Muted else Muted.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
-                        }
+                if (currentSong != null) {
+                    AlbumArtwork(currentSong!!, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
+                } else {
+                    Box(Modifier.size(36.dp).background(AccentDeep, RoundedCornerShape(9.dp)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(20.dp))
                     }
-                    Box(Modifier.fillMaxWidth().height(2.dp).background(Color.White.copy(alpha = 0.07f))) {
-                        Box(
-                            Modifier.fillMaxWidth(miniProgress).height(2.dp)
-                                .background(Brush.horizontalGradient(listOf(AccentDeep, Accent)))
-                        )
-                    }
+                }
+                Text(
+                    currentSong?.title ?: "Nothing playing",
+                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, modifier = Modifier.weight(1f).padding(start = 9.dp, end = 5.dp)
+                )
+                IconButton(onClick = { player.seekToPreviousMediaItem() }, enabled = currentSong != null, modifier = Modifier.size(34.dp)) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = if (currentSong != null) Muted else Muted.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
+                }
+                IconButton(onClick = { if (player.isPlaying) player.pause() else if (currentSong != null) player.play() }, enabled = currentSong != null, modifier = Modifier.size(38.dp)) {
+                    Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play or pause", tint = Accent, modifier = Modifier.size(27.dp))
+                }
+                IconButton(onClick = { player.seekToNextMediaItem() }, enabled = currentSong != null, modifier = Modifier.size(34.dp)) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = if (currentSong != null) Muted else Muted.copy(alpha = 0.35f), modifier = Modifier.size(20.dp))
                 }
             }
             Row(
