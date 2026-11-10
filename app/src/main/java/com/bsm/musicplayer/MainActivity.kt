@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.ContentUris
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,6 +17,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -48,6 +51,8 @@ import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Queue
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -58,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,7 +92,9 @@ data class Song(
     val artist: String,
     val uri: Uri,
     val duration: Long,
-    val searchText: String = normalizeSearchText("$title $artist")
+    val album: String = "Unknown album",
+    val albumId: Long = -1L,
+    val searchText: String = normalizeSearchText("$title $artist $album")
 )
 
 private fun normalizeSearchText(value: String): String {
@@ -189,7 +197,9 @@ class MainActivity : ComponentActivity() {
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.DURATION
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.ALBUM_ID,
+            MediaStore.Audio.Media.ALBUM
         )
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
         val sortOrder = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
@@ -199,6 +209,8 @@ class MainActivity : ComponentActivity() {
             val titleCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val durationCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val albumIdCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+            val albumCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             while (it.moveToNext()) {
                 val id = it.getLong(idCol)
                 songs += Song(
@@ -206,7 +218,9 @@ class MainActivity : ComponentActivity() {
                     title = it.getString(titleCol) ?: "Unknown title",
                     artist = it.getString(artistCol)?.takeIf { name -> name != "<unknown>" } ?: "Unknown artist",
                     uri = ContentUris.withAppendedId(collection, id),
-                    duration = it.getLong(durationCol)
+                    duration = it.getLong(durationCol),
+                    album = it.getString(albumCol)?.takeIf { name -> name.isNotBlank() && name != "<unknown>" } ?: "Unknown album",
+                    albumId = it.getLong(albumIdCol)
                 )
             }
         }
@@ -249,6 +263,9 @@ private fun BsmMusicApp(
     var queueCurrentIndex by remember { mutableIntStateOf(-1) }
     var searchQuery by remember { mutableStateOf("") }
     var sortByArtist by remember { mutableStateOf(false) }
+    var librarySection by remember { mutableStateOf("SONGS") }
+    var selectedArtist by remember { mutableStateOf<String?>(null) }
+    var selectedAlbum by remember { mutableStateOf<Long?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val favoritesPrefs = remember(context) { context.getSharedPreferences("bsm_music_preferences", android.content.Context.MODE_PRIVATE) }
@@ -294,7 +311,7 @@ private fun BsmMusicApp(
     }
     val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
     var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
-    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames) {
+    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames, selectedArtist, selectedAlbum) {
         val queryWords = normalizeSearchText(searchQuery).split(' ').filter { it.isNotBlank() }
         val activePlaylist = selectedPlaylist
         visibleSongs = withContext(Dispatchers.Default) {
@@ -303,7 +320,9 @@ private fun BsmMusicApp(
             }
             val filtered = searched.filter { song ->
                 (!showFavoritesOnly || song.id in favoriteIds) &&
-                    (activePlaylist == null || song.id in playlistSongIds(activePlaylist))
+                    (activePlaylist == null || song.id in playlistSongIds(activePlaylist)) &&
+                    (selectedArtist == null || song.artist == selectedArtist) &&
+                    (selectedAlbum == null || song.albumId == selectedAlbum)
             }
             if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
         }
@@ -415,11 +434,15 @@ private fun BsmMusicApp(
             }
             Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("YOUR LIBRARY", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                    Text(selectedArtist ?: (selectedAlbum?.let { id -> songs.firstOrNull { it.albumId == id }?.album } ?: "YOUR LIBRARY"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, maxLines = 1)
                     Text("${visibleSongs.size} SONGS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                 }
-                TextButton(onClick = { sortByArtist = !sortByArtist }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
-                    Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                if (selectedArtist != null || selectedAlbum != null) {
+                    TextButton(onClick = { selectedArtist = null; selectedAlbum = null; librarySection = "SONGS" }) { Text("BACK", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                } else if (librarySection == "SONGS") {
+                    TextButton(onClick = { sortByArtist = !sortByArtist }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
+                        Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             Row(
