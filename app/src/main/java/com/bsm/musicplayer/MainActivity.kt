@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
@@ -453,59 +454,89 @@ private fun BsmMusicApp(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp)
+                .pointerInput(librarySection) {
+                    var horizontalTravel = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, amount ->
+                            horizontalTravel += amount
+                            change.consume()
+                        },
+                        onDragEnd = {
+                            val sections = listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP")
+                            val current = sections.indexOf(librarySection).coerceAtLeast(0)
+                            if (horizontalTravel < -65f && current < sections.lastIndex) {
+                                librarySection = sections[current + 1]
+                                selectedArtist = null
+                                selectedAlbum = null
+                            } else if (horizontalTravel > 65f && current > 0) {
+                                librarySection = sections[current - 1]
+                                selectedArtist = null
+                                selectedAlbum = null
+                            }
+                            horizontalTravel = 0f
+                        },
+                        onDragCancel = { horizontalTravel = 0f }
+                    )
+                }
+        ) {
+            Row(Modifier.fillMaxWidth().padding(top = 7.dp, bottom = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("YOUR MUSIC. YOUR RULES.", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Text("YOUR MUSIC. YOUR RULES.", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text("BSM", color = Accent, fontSize = 29.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                        Text(" MUSIC", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                        Text("BSM", color = Accent, fontSize = 25.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(" MUSIC", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
                     }
                 }
-                Box(Modifier.size(46.dp).background(SurfaceDark, CircleShape), contentAlignment = Alignment.Center) {
-                    IconButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) {
-                        if (isRefreshing) CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                        else Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
-                    }
+                IconButton(onClick = { refreshLibrary() }, enabled = !isRefreshing) {
+                    if (isRefreshing) CircularProgressIndicator(color = Accent, strokeWidth = 2.dp, modifier = Modifier.size(19.dp))
+                    else Icon(Icons.Default.Refresh, contentDescription = "Refresh library", tint = Accent)
                 }
             }
             OutlinedTextField(
-                value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth(),
-                singleLine = true, shape = RoundedCornerShape(18.dp),
-                placeholder = { Text("Search songs or artists", color = Muted, fontSize = 14.sp) },
+                value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                singleLine = true, shape = RoundedCornerShape(16.dp),
+                placeholder = { Text("Search songs or artists", color = Muted, fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent) },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = SurfaceDark, focusedContainerColor = SurfaceDark, unfocusedContainerColor = SurfaceDark, focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Accent)
             )
-            Spacer(Modifier.height(16.dp))
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Brush.linearGradient(listOf(AccentDeep, SurfaceRaised))).padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("YOUR SOUNDTRACK", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text("${songs.size}", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black)
-                        Text(if (songs.size == 1) "TRACK IN YOUR LIBRARY" else "TRACKS IN YOUR LIBRARY", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Spacer(Modifier.height(15.dp))
-                        Button(onClick = {
-                            if (songs.isNotEmpty()) {
-                                currentSong = songs.first()
-                                player.shuffleModeEnabled = false
-                                player.seekTo(0, 0L)
-                                if (player.playbackState == Player.STATE_IDLE) player.prepare()
-                                player.play()
-                                showPlayer = true
-                            }
-                        }, enabled = songs.isNotEmpty(), shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp), colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background, disabledContainerColor = SurfaceRaised, disabledContentColor = Muted)) {
-                            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text("PLAY ALL", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                        }
-                    }
-                    Box(Modifier.size(88.dp).background(Color.White.copy(alpha = 0.06f), CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(48.dp))
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(19.dp))
+                    .background(Brush.linearGradient(listOf(AccentDeep, SurfaceRaised)))
+                    .padding(horizontal = 15.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("YOUR LIBRARY", color = Color.White.copy(alpha = 0.7f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("${songs.size}", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.width(7.dp))
+                        Text("TRACKS", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+                Button(onClick = {
+                    if (songs.isNotEmpty()) {
+                        currentSong = songs.first()
+                        player.shuffleModeEnabled = false
+                        player.seekTo(0, 0L)
+                        if (player.playbackState == Player.STATE_IDLE) player.prepare()
+                        player.play()
+                        showPlayer = true
+                    }
+                }, enabled = songs.isNotEmpty(), shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 13.dp, vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background, disabledContainerColor = SurfaceRaised, disabledContentColor = Muted)
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("PLAY ALL", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(27.dp))
             }
-            Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(selectedArtist ?: (selectedAlbum?.let { id -> songs.firstOrNull { it.albumId == id }?.album } ?: "YOUR LIBRARY"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, maxLines = 1)
                     Text(
@@ -536,7 +567,7 @@ private fun BsmMusicApp(
                 }
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
@@ -572,7 +603,7 @@ private fun BsmMusicApp(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp).horizontalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP").forEach { section ->
@@ -592,7 +623,7 @@ private fun BsmMusicApp(
                     )
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("PLAYLISTS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
                 if (playlistNames.isNotEmpty()) {
                     TextButton(onClick = { showManagePlaylists = true }) {
@@ -607,7 +638,7 @@ private fun BsmMusicApp(
             }
             if (playlistNames.isNotEmpty()) {
                 Row(
-                    Modifier.fillMaxWidth().padding(bottom = 10.dp).horizontalScroll(rememberScrollState()),
+                    Modifier.fillMaxWidth().padding(bottom = 5.dp).horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     FilterChip(selected = selectedPlaylist == null, onClick = { selectedPlaylist = null }, label = { Text("ALL", fontSize = 10.sp) })
