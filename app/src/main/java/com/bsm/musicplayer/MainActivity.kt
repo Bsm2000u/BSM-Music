@@ -19,6 +19,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -279,16 +286,31 @@ private fun BsmMusicApp(
     var librarySection by remember { mutableStateOf("SONGS") }
     var selectedArtist by remember { mutableStateOf<String?>(null) }
     var selectedAlbum by remember { mutableStateOf<Long?>(null) }
+    var detailBackAnimating by remember { mutableStateOf(false) }
+    val detailExitProgress by animateFloatAsState(targetValue = if (detailBackAnimating) 1f else 0f, animationSpec = tween(170), label = "detailBack")
     var isRefreshing by remember { mutableStateOf(false) }
 
+    LaunchedEffect(detailBackAnimating) {
+        if (detailBackAnimating) {
+            kotlinx.coroutines.delay(170L)
+            if (selectedAlbum != null) {
+                selectedAlbum = null
+            } else {
+                selectedArtist = null
+                selectedAlbum = null
+                librarySection = "SONGS"
+            }
+            detailBackAnimating = false
+        }
+    }
+
     BackHandler(
-        enabled = showQueue || showPlayer || selectedAlbum != null || selectedArtist != null
+        enabled = showQueue || showPlayer || ((selectedAlbum != null || selectedArtist != null) && !detailBackAnimating)
     ) {
         when {
             showQueue -> showQueue = false
             showPlayer -> showPlayer = false
-            selectedAlbum != null -> selectedAlbum = null
-            selectedArtist != null -> selectedArtist = null
+            selectedAlbum != null || selectedArtist != null -> detailBackAnimating = true
         }
     }
     LaunchedEffect(player, isPlaying, currentSong) {
@@ -571,15 +593,9 @@ private fun BsmMusicApp(
                     )
                 }
                 if (selectedArtist != null || selectedAlbum != null) {
-                    TextButton(onClick = {
-                        if (selectedAlbum != null && selectedArtist != null) {
-                            selectedAlbum = null
-                        } else {
-                            selectedArtist = null
-                            selectedAlbum = null
-                            librarySection = "SONGS"
-                        }
-                    }) { Text("BACK", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    TextButton(onClick = { if (!detailBackAnimating) detailBackAnimating = true }) {
+                        Text("BACK", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
                 } else if (librarySection == "SONGS") {
                     TextButton(onClick = { sortByArtist = !sortByArtist }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
                         Text(if (sortByArtist) "ARTIST A–Z" else "TITLE A–Z", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -777,7 +793,7 @@ private fun BsmMusicApp(
                                     Modifier.weight(1f).background(SurfaceDark, RoundedCornerShape(18.dp))
                                         .clickable { selectedArtist = artist }.padding(11.dp)
                                 ) {
-                                    AlbumArtwork(artistSongs.first(), Modifier.fillMaxWidth().height(104.dp))
+                                    AlbumArtwork(artistSongs.first(), Modifier.fillMaxWidth().height(104.dp).animateContentSize(tween(180)))
                                     Spacer(Modifier.height(10.dp))
                                     Text(artist, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
                                     Text("${artistSongs.size} tracks · ${artistSongs.map { it.albumId }.distinct().size} albums", color = Muted, fontSize = 10.sp, maxLines = 1)
@@ -800,6 +816,7 @@ private fun BsmMusicApp(
                                         .clip(RoundedCornerShape(19.dp))
                                         .background(Brush.linearGradient(listOf(SurfaceRaised, SurfaceDark)))
                                         .clickable { selectedAlbum = albumSong.albumId }
+                                        .animateContentSize(tween(180))
                                         .padding(10.dp)
                                 ) {
                                     Box {
@@ -952,7 +969,7 @@ private fun BsmMusicApp(
                                     artistAlbums.forEach { albumSong ->
                                         val albumTrackCount = visibleSongs.count { it.albumId == albumSong.albumId }
                                         Column(
-                                            Modifier.width(116.dp).clip(RoundedCornerShape(15.dp))
+                                            Modifier.width(116.dp).animateContentSize(tween(180)).clip(RoundedCornerShape(15.dp))
                                                 .background(Color.Black.copy(alpha = 0.2f))
                                                 .clickable { selectedAlbum = albumSong.albumId }
                                                 .padding(7.dp)
@@ -978,7 +995,7 @@ private fun BsmMusicApp(
                     }
                 }
                 val songListState = rememberLazyListState()
-                LazyColumn(state = songListState, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
+                LazyColumn(state = songListState, modifier = Modifier.weight(1f).graphicsLayer { alpha = 1f - detailExitProgress; translationX = 64f * detailExitProgress }, verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
                     items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
                         SongRow(
                             song = song,
@@ -1061,8 +1078,14 @@ private fun BsmMusicApp(
                 }
             }
         }
-        if (showPlayer && currentSong != null) {
-            PlayerScreen(song = currentSong!!, player = player, isFavorite = currentSong!!.id in favoriteIds, onToggleFavorite = { toggleFavorite(currentSong!!) }, onAddToPlaylist = { songForPlaylist = currentSong }, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true }, sleepTimerMinutes = sleepTimerMinutes, sleepTimerRemaining = sleepTimerRemaining, onSetSleepTimer = { sleepTimerMinutes = it })
+        AnimatedVisibility(
+            visible = showPlayer && currentSong != null,
+            enter = fadeIn(tween(210)) + slideInVertically(initialOffsetY = { it / 5 }, animationSpec = tween(240)),
+            exit = fadeOut(tween(160)) + slideOutVertically(targetOffsetY = { it / 5 }, animationSpec = tween(180))
+        ) {
+            currentSong?.let { activeSong ->
+                PlayerScreen(song = activeSong, player = player, isFavorite = activeSong.id in favoriteIds, onToggleFavorite = { toggleFavorite(activeSong) }, onAddToPlaylist = { songForPlaylist = activeSong }, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() }, onShowQueue = { showQueue = true }, sleepTimerMinutes = sleepTimerMinutes, sleepTimerRemaining = sleepTimerRemaining, onSetSleepTimer = { sleepTimerMinutes = it })
+            }
         }
         if (showQueue) {
             AlertDialog(
@@ -1355,6 +1378,7 @@ private fun SongRow(
     Row(
         modifier = Modifier.fillMaxWidth()
             .height(82.dp)
+            .animateContentSize(tween(160))
             .clip(RoundedCornerShape(17.dp))
             .background(Brush.horizontalGradient(listOf(SurfaceRaised, SurfaceDark)))
             .clickable(onClick = onClick)
