@@ -278,11 +278,13 @@ private fun BsmMusicApp(
             .split(",").mapNotNull { it.toLongOrNull() }.distinct().take(50))
     }
     var playCounts by remember {
-        mutableStateOf(favoritesPrefs.getStringSet("play_counts", emptySet<String>())
-            ?.mapNotNull { entry ->
-                val parts = entry.split(":")
-                if (parts.size == 2) parts[0].toLongOrNull()?.let { id -> id to (parts[1].toIntOrNull() ?: 0) } else null
-            }?.toMap() ?: emptyMap())
+        mutableStateOf<Map<Long, Int>>(
+            favoritesPrefs.getStringSet("play_counts", emptySet<String>())
+                ?.mapNotNull { entry ->
+                    val parts = entry.split(":")
+                    if (parts.size == 2) parts[0].toLongOrNull()?.let { id -> id to (parts[1].toIntOrNull() ?: 0) } else null
+                }?.toMap() ?: emptyMap<Long, Int>()
+        )
     }
     var showFavoritesOnly by remember { mutableStateOf(false) }
     var playlistNames by remember { mutableStateOf<List<String>>(favoritesPrefs.getStringSet("playlist_names", emptySet<String>())?.toList()?.sorted() ?: emptyList()) }
@@ -383,7 +385,7 @@ private fun BsmMusicApp(
         player.setMediaItems(mediaItems)
     }
 
-    DisposableEffect(player, songs) {
+    DisposableEffect(player, songs, recentSongIds, playCounts) {
         val listener = object : Player.Listener {
             private fun updateQueue() {
                 queueTracks = (0 until player.mediaItemCount).mapNotNull { index ->
