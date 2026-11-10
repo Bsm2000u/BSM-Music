@@ -436,7 +436,14 @@ private fun BsmMusicApp(
             Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(selectedArtist ?: (selectedAlbum?.let { id -> songs.firstOrNull { it.albumId == id }?.album } ?: "YOUR LIBRARY"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, maxLines = 1)
-                    Text("${visibleSongs.size} SONGS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                    Text(
+                        when (librarySection) {
+                            "ARTISTS" -> "${visibleSongs.map { it.artist }.distinct().size} ARTISTS"
+                            "ALBUMS" -> "${visibleSongs.map { it.albumId }.distinct().size} ALBUMS"
+                            else -> "${visibleSongs.size} SONGS"
+                        },
+                        color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp
+                    )
                 }
                 if (selectedArtist != null || selectedAlbum != null) {
                     TextButton(onClick = { selectedArtist = null; selectedAlbum = null; librarySection = "SONGS" }) { Text("BACK", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
@@ -655,7 +662,8 @@ private fun BsmMusicApp(
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 9.dp, bottom = 8.dp).background(SurfaceRaised, RoundedCornerShape(20.dp)).clickable { if (currentSong != null) showPlayer = true }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(42.dp).background(AccentDeep, RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(23.dp)) }
+                if (currentSong != null) AlbumArtwork(currentSong!!, Modifier.size(42.dp))
+                else Box(Modifier.size(42.dp).background(AccentDeep, RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(23.dp)) }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(currentSong?.title ?: "Nothing playing", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Text(currentSong?.artist ?: "Choose a song to get started", color = Muted, fontSize = 11.sp, maxLines = 1)
