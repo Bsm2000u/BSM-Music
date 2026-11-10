@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
@@ -240,6 +241,15 @@ private fun BsmMusicApp(
         mutableStateOf(favoritesPrefs.getStringSet("favorite_song_ids", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet())
     }
     var showFavoritesOnly by remember { mutableStateOf(false) }
+    var playlistNames by remember { mutableStateOf(favoritesPrefs.getStringSet("playlist_names", emptySet())?.toList()?.sorted() ?: emptyList()) }
+    var selectedPlaylist by remember { mutableStateOf<String?>(null) }
+    var songForPlaylist by remember { mutableStateOf<Song?>(null) }
+    var showCreatePlaylist by remember { mutableStateOf(false) }
+    var newPlaylistName by remember { mutableStateOf("") }
+    fun playlistSongIds(name: String): Set<Long> = favoritesPrefs.getStringSet("playlist_$name", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
+    fun savePlaylistSongIds(name: String, ids: Set<Long>) {
+        favoritesPrefs.edit().putStringSet("playlist_$name", ids.map { it.toString() }.toSet()).apply()
+    }
     fun toggleFavorite(song: Song) {
         val updated = if (song.id in favoriteIds) favoriteIds - song.id else favoriteIds + song.id
         favoriteIds = updated
@@ -259,14 +269,15 @@ private fun BsmMusicApp(
     }
     val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
     var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
-    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly) {
+    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames) {
         val queryWords = normalizeSearchText(searchQuery).split(' ').filter { it.isNotBlank() }
         visibleSongs = withContext(Dispatchers.Default) {
             val searched = if (queryWords.isEmpty()) songs else {
                 songs.filter { song -> queryWords.all { word -> word in song.searchText } }
             }
             val filtered = searched.filter { song ->
-                (!showFavoritesOnly || song.id in favoriteIds)
+                (!showFavoritesOnly || song.id in favoriteIds) &&
+                    (selectedPlaylist == null || song.id in playlistSongIds(selectedPlaylist))
             }
             if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
         }
@@ -403,6 +414,22 @@ private fun BsmMusicApp(
                     )
                 )
             }
+            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("PLAYLISTS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
+                TextButton(onClick = { newPlaylistName = ""; showCreatePlaylist = true }) {
+                    Icon(Icons.Default.PlaylistAdd, null, tint = Accent, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("NEW", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            if (playlistNames.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    FilterChip(selected = selectedPlaylist == null, onClick = { selectedPlaylist = null }, label = { Text("ALL", fontSize = 10.sp) })
+                    playlistNames.forEach { name ->
+                        FilterChip(selected = selectedPlaylist == name, onClick = { selectedPlaylist = if (selectedPlaylist == name) null else name; showFavoritesOnly = false }, label = { Text(name, fontSize = 10.sp, maxLines = 1) })
+                    }
+                }
+            }
             if (!permissionGranted) {
                 Column(Modifier.fillMaxWidth().weight(1f).background(SurfaceDark, RoundedCornerShape(24.dp)).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(54.dp))
@@ -446,7 +473,8 @@ private fun BsmMusicApp(
                             song = song,
                             isFavorite = song.id in favoriteIds,
                             onSongClick = onSongClick,
-                            onToggleFavorite = { toggleFavorite(song) }
+                            onToggleFavorite = { toggleFavorite(song) },
+                            onAddToPlaylist = { songForPlaylist = song }
                         )
                     }
                 }
@@ -465,6 +493,51 @@ private fun BsmMusicApp(
         if (showPlayer && currentSong != null) {
             PlayerScreen(song = currentSong!!, player = player, onClose = { showPlayer = false }, onPrevious = { player.seekToPreviousMediaItem() }, onNext = { player.seekToNextMediaItem() })
         }
+        if (showCreatePlaylist) {
+            AlertDialog(
+                onDismissRequest = { showCreatePlaylist = false },
+                title = { Text("Create playlist") },
+                text = { OutlinedTextField(value = newPlaylistName, onValueChange = { newPlaylistName = it }, singleLine = true, label = { Text("Playlist name") }) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val name = newPlaylistName.trim()
+                        if (name.isNotEmpty() && name !in playlistNames) {
+                            playlistNames = (playlistNames + name).sorted()
+                            favoritesPrefs.edit().putStringSet("playlist_names", playlistNames.toSet()).apply()
+                            selectedPlaylist = name
+                        }
+                        showCreatePlaylist = false
+                    }) { Text("CREATE", color = Accent) }
+                },
+                dismissButton = { TextButton(onClick = { showCreatePlaylist = false }) { Text("CANCEL") } },
+                containerColor = SurfaceDark,
+                titleContentColor = Color.White,
+                textContentColor = Muted
+            )
+        }
+        songForPlaylist?.let { song ->
+            AlertDialog(
+                onDismissRequest = { songForPlaylist = null },
+                title = { Text("Add to playlist") },
+                text = {
+                    Column {
+                        if (playlistNames.isEmpty()) Text("Create a playlist first.", color = Muted)
+                        playlistNames.forEach { name ->
+                            TextButton(onClick = {
+                                savePlaylistSongIds(name, playlistSongIds(name) + song.id)
+                                songForPlaylist = null
+                                selectedPlaylist = name
+                                showFavoritesOnly = false
+                            }) { Text(name, color = Color.White) }
+                        }
+                        TextButton(onClick = { songForPlaylist = null; newPlaylistName = ""; showCreatePlaylist = true }) { Text("+ Create new playlist", color = Accent) }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { songForPlaylist = null }) { Text("DONE", color = Accent) } },
+                containerColor = SurfaceDark,
+                titleContentColor = Color.White
+            )
+        }
     }
 }
 
@@ -474,7 +547,8 @@ private fun SongRow(
     song: Song,
     isFavorite: Boolean,
     onSongClick: (Song) -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onAddToPlaylist: () -> Unit
 ) {
     val onClick = remember(song, onSongClick) { { onSongClick(song) } }
     Row(
@@ -496,6 +570,9 @@ private fun SongRow(
             Text(song.artist, color = Muted, fontSize = 12.sp, maxLines = 1)
         }
         Text(formatTime(song.duration), color = Muted, fontSize = 11.sp)
+        IconButton(onClick = onAddToPlaylist, modifier = Modifier.size(38.dp)) {
+            Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to playlist", tint = Muted, modifier = Modifier.size(19.dp))
+        }
         IconButton(onClick = onToggleFavorite, modifier = Modifier.size(42.dp)) {
             Icon(
                 if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
