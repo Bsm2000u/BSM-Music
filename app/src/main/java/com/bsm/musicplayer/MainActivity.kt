@@ -273,6 +273,17 @@ private fun BsmMusicApp(
     var favoriteIds by remember {
         mutableStateOf(favoritesPrefs.getStringSet("favorite_song_ids", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet())
     }
+    var recentSongIds by remember {
+        mutableStateOf(favoritesPrefs.getString("recent_song_ids", "").orEmpty()
+            .split(",").mapNotNull { it.toLongOrNull() }.distinct().take(50))
+    }
+    var playCounts by remember {
+        mutableStateOf(favoritesPrefs.getStringSet("play_counts", emptySet<String>())
+            ?.mapNotNull { entry ->
+                val parts = entry.split(":")
+                if (parts.size == 2) parts[0].toLongOrNull()?.let { id -> id to (parts[1].toIntOrNull() ?: 0) } else null
+            }?.toMap() ?: emptyMap())
+    }
     var showFavoritesOnly by remember { mutableStateOf(false) }
     var playlistNames by remember { mutableStateOf<List<String>>(favoritesPrefs.getStringSet("playlist_names", emptySet<String>())?.toList()?.sorted() ?: emptyList()) }
     var playlistSongCounts by remember(favoritesPrefs) {
@@ -312,7 +323,7 @@ private fun BsmMusicApp(
     }
     val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
     var visibleSongs by remember { mutableStateOf(emptyList<Song>()) }
-    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames, selectedArtist, selectedAlbum) {
+    LaunchedEffect(songs, searchQuery, sortByArtist, favoriteIds, showFavoritesOnly, selectedPlaylist, playlistNames, selectedArtist, selectedAlbum, recentSongIds, playCounts, librarySection) {
         val queryWords = normalizeSearchText(searchQuery).split(' ').filter { it.isNotBlank() }
         val activePlaylist = selectedPlaylist
         visibleSongs = withContext(Dispatchers.Default) {
@@ -325,7 +336,15 @@ private fun BsmMusicApp(
                     (selectedArtist == null || song.artist == selectedArtist) &&
                     (selectedAlbum == null || song.albumId == selectedAlbum)
             }
-            if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
+            when (librarySection) {
+                "RECENT" -> {
+                    val recentOrder = recentSongIds.withIndex().associate { it.value to it.index }
+                    filtered.filter { it.id in recentOrder }.sortedBy { recentOrder[it.id] ?: Int.MAX_VALUE }
+                }
+                "TOP" -> filtered.filter { (playCounts[it.id] ?: 0) > 0 }
+                    .sortedWith(compareByDescending<Song> { playCounts[it.id] ?: 0 }.thenBy { it.title.lowercase() })
+                else -> if (sortByArtist) filtered.sortedBy { it.artist.lowercase() } else filtered
+            }
         }
     }
     fun addSongToQueueNext(song: Song) {
@@ -378,7 +397,19 @@ private fun BsmMusicApp(
             override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) { updateQueue() }
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 val uri = mediaItem?.localConfiguration?.uri
-                currentSong = songs.firstOrNull { it.uri == uri } ?: currentSong
+                val playedSong = songs.firstOrNull { it.uri == uri }
+                currentSong = playedSong ?: currentSong
+                if (playedSong != null) {
+                    val updatedRecent = (listOf(playedSong.id) + recentSongIds.filterNot { it == playedSong.id }).take(50)
+                    recentSongIds = updatedRecent
+                    favoritesPrefs.edit().putString("recent_song_ids", updatedRecent.joinToString(",")).apply()
+                    val updatedCounts = playCounts + (playedSong.id to ((playCounts[playedSong.id] ?: 0) + 1))
+                    playCounts = updatedCounts
+                    favoritesPrefs.edit().putStringSet(
+                        "play_counts",
+                        updatedCounts.map { (id, count) -> "$id:$count" }.toSet()
+                    ).apply()
+                }
                 updateQueue()
             }
         }
@@ -454,6 +485,8 @@ private fun BsmMusicApp(
                         when (librarySection) {
                             "ARTISTS" -> "${visibleSongs.map { it.artist }.distinct().size} ARTISTS"
                             "ALBUMS" -> "${visibleSongs.map { it.albumId }.distinct().size} ALBUMS"
+                            "RECENT" -> "${visibleSongs.size} RECENT TRACKS"
+                            "TOP" -> "${visibleSongs.size} MOST PLAYED TRACKS"
                             else -> "${visibleSongs.size} SONGS"
                         },
                         color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp
@@ -512,10 +545,10 @@ private fun BsmMusicApp(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("SONGS", "ARTISTS", "ALBUMS").forEach { section ->
+                listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP").forEach { section ->
                     FilterChip(
                         selected = librarySection == section,
                         onClick = { librarySection = section; selectedArtist = null; selectedAlbum = null },
@@ -597,6 +630,8 @@ private fun BsmMusicApp(
                             when {
                                 isEmptyPlaylist -> "${activePlaylistName} is empty"
                                 showFavoritesOnly -> "No favorites yet"
+                                librarySection == "RECENT" -> "Nothing played yet"
+                                librarySection == "TOP" -> "No play statistics yet"
                                 else -> "No matching songs"
                             },
                             color = Color.White, fontWeight = FontWeight.Bold
@@ -606,6 +641,8 @@ private fun BsmMusicApp(
                             when {
                                 isEmptyPlaylist -> "Add songs from your library using the playlist button."
                                 showFavoritesOnly -> "Tap the heart on a song to save it here"
+                                librarySection == "RECENT" -> "Your recently played tracks will appear here."
+                                librarySection == "TOP" -> "Play some music and your most played tracks will appear here."
                                 else -> "Try another song or artist name"
                             },
                             color = Muted, fontSize = 12.sp
