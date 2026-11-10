@@ -55,10 +55,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.Normalizer
 
-private val Background = Color(0xFF101311)
-private val SurfaceDark = Color(0xFF1A201C)
-private val Accent = Color(0xFFB8F36B)
-private val Muted = Color(0xFF929A94)
+private val Background = Color(0xFF08090C)
+private val SurfaceDark = Color(0xFF15161B)
+private val Accent = Color(0xFFFF3048)
+private val Muted = Color(0xFF9698A2)
+private val AccentDeep = Color(0xFF351018)
+private val SurfaceRaised = Color(0xFF1D1E25)
 
 @androidx.compose.runtime.Immutable
 data class Song(
@@ -298,8 +300,8 @@ private fun BsmMusicApp(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("BSM", color = Accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
-                    Text("MUSIC", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                    Text("BSM", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 4.sp)
+                    Text("MUSIC", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 2.5.sp)
                 }
                 IconButton(onClick = { }) {
                     Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
@@ -378,11 +380,11 @@ private fun BsmMusicApp(
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp)
-                    .background(Color(0xFF263126), RoundedCornerShape(18.dp))
+                    .background(SurfaceRaised, RoundedCornerShape(20.dp))
                     .clickable { if (currentSong != null) showPlayer = true }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(28.dp))
+                Box(Modifier.size(42.dp).background(AccentDeep, RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) { Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(23.dp)) }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(currentSong?.title ?: "Nothing playing", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Text(currentSong?.artist ?: "Choose a song to get started", color = Muted, fontSize = 11.sp, maxLines = 1)
@@ -421,7 +423,7 @@ private fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            Modifier.size(46.dp).background(Color(0xFF29352A), RoundedCornerShape(13.dp)),
+            Modifier.size(46.dp).background(AccentDeep, RoundedCornerShape(14.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.MusicNote, null, tint = Accent)
@@ -458,7 +460,7 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
             TextButton(onClick = onClose) { Text("CLOSE", color = Accent, fontWeight = FontWeight.Bold) }
         }
         Spacer(Modifier.weight(1f))
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).background(Color(0xFF29352A), RoundedCornerShape(28.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).background(AccentDeep, RoundedCornerShape(30.dp)), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(110.dp))
         }
         Spacer(Modifier.height(34.dp))
