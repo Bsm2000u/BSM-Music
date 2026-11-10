@@ -17,12 +17,14 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -242,6 +244,12 @@ private fun BsmMusicApp(
     }
     var showFavoritesOnly by remember { mutableStateOf(false) }
     var playlistNames by remember { mutableStateOf<List<String>>(favoritesPrefs.getStringSet("playlist_names", emptySet<String>())?.toList()?.sorted() ?: emptyList()) }
+    var playlistSongCounts by remember(favoritesPrefs) {
+        mutableStateOf(playlistNames.associateWith { name ->
+            favoritesPrefs.getStringSet("playlist_$name", emptySet<String>())
+                ?.count { it.toLongOrNull() != null } ?: 0
+        })
+    }
     var selectedPlaylist by remember { mutableStateOf<String?>(null) }
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
     var showCreatePlaylist by remember { mutableStateOf(false) }
@@ -252,6 +260,7 @@ private fun BsmMusicApp(
     fun playlistSongIds(name: String): Set<Long> = favoritesPrefs.getStringSet("playlist_$name", emptySet<String>())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
     fun savePlaylistSongIds(name: String, ids: Set<Long>) {
         favoritesPrefs.edit().putStringSet("playlist_$name", ids.map { it.toString() }.toSet()).apply()
+        playlistSongCounts = playlistSongCounts + (name to ids.size)
     }
     fun toggleFavorite(song: Song) {
         val updated = if (song.id in favoriteIds) favoriteIds - song.id else favoriteIds + song.id
@@ -432,10 +441,17 @@ private fun BsmMusicApp(
                 }
             }
             if (playlistNames.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(bottom = 10.dp).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
                     FilterChip(selected = selectedPlaylist == null, onClick = { selectedPlaylist = null }, label = { Text("ALL", fontSize = 10.sp) })
                     playlistNames.forEach { name ->
-                        FilterChip(selected = selectedPlaylist == name, onClick = { selectedPlaylist = if (selectedPlaylist == name) null else name; showFavoritesOnly = false }, label = { Text(name, fontSize = 10.sp, maxLines = 1) })
+                        FilterChip(
+                            selected = selectedPlaylist == name,
+                            onClick = { selectedPlaylist = if (selectedPlaylist == name) null else name; showFavoritesOnly = false },
+                            label = { Text("$name · ${playlistSongCounts[name] ?: 0}", fontSize = 10.sp, maxLines = 1) }
+                        )
                     }
                 }
             }
@@ -550,6 +566,7 @@ private fun BsmMusicApp(
                                         .putStringSet("playlist_names", playlistNames.toSet())
                                         .remove("playlist_" + name)
                                         .apply()
+                                    playlistSongCounts = playlistSongCounts - name
                                     if (selectedPlaylist == name) selectedPlaylist = null
                                 }) { Text("DELETE", color = Color(0xFFFF6B78), fontSize = 10.sp) }
                             }
@@ -579,6 +596,7 @@ private fun BsmMusicApp(
                                 .putStringSet("playlist_" + newName, ids.map { it.toString() }.toSet())
                                 .remove("playlist_" + oldName)
                                 .apply()
+                            playlistSongCounts = (playlistSongCounts - oldName) + (newName to ids.size)
                             if (selectedPlaylist == oldName) selectedPlaylist = newName
                         }
                         playlistToRename = null
