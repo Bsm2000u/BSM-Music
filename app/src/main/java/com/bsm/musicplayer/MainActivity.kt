@@ -18,6 +18,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -1259,7 +1264,9 @@ private fun PlayerScreen(
                 Text(song.album, color = Muted, fontSize = 11.sp, maxLines = 1)
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(9.dp))
+            PlaybackVisualizer(isPlaying = playing)
+            Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -1380,6 +1387,37 @@ private fun PlayerScreen(
                 }
             }
             Spacer(Modifier.weight(0.55f))
+        }
+    }
+}
+
+@Composable
+private fun PlaybackVisualizer(isPlaying: Boolean) {
+    val transition = rememberInfiniteTransition(label = "playback_visualizer")
+    val levels = listOf(
+        transition.animateFloat(0.18f, 0.95f, infiniteRepeatable(tween(520, delayMillis = 0), RepeatMode.Reverse), label = "bar_1").value,
+        transition.animateFloat(0.25f, 0.82f, infiniteRepeatable(tween(680, delayMillis = 90), RepeatMode.Reverse), label = "bar_2").value,
+        transition.animateFloat(0.12f, 1.00f, infiniteRepeatable(tween(460, delayMillis = 160), RepeatMode.Reverse), label = "bar_3").value,
+        transition.animateFloat(0.30f, 0.88f, infiniteRepeatable(tween(610, delayMillis = 50), RepeatMode.Reverse), label = "bar_4").value,
+        transition.animateFloat(0.16f, 0.96f, infiniteRepeatable(tween(560, delayMillis = 210), RepeatMode.Reverse), label = "bar_5").value,
+        transition.animateFloat(0.22f, 0.78f, infiniteRepeatable(tween(730, delayMillis = 130), RepeatMode.Reverse), label = "bar_6").value,
+        transition.animateFloat(0.14f, 0.90f, infiniteRepeatable(tween(490, delayMillis = 260), RepeatMode.Reverse), label = "bar_7").value
+    )
+    Row(
+        modifier = Modifier.height(25.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        levels.forEach { level ->
+            Box(
+                Modifier
+                    .width(3.dp)
+                    .height((if (isPlaying) 6f + 18f * level else 5f).dp)
+                    .background(
+                        if (isPlaying) Accent else Muted.copy(alpha = 0.55f),
+                        CircleShape
+                    )
+            )
         }
     }
 }
