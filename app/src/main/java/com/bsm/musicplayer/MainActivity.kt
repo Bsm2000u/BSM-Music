@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
@@ -58,6 +57,7 @@ class MainActivity : ComponentActivity() {
     private var controller: MediaController? = null
     private var playbackPlayer by mutableStateOf<MediaController?>(null)
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
     private var permissionCallback: ((Boolean) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
             permissionCallback?.invoke(granted)
             permissionCallback = null
         }
+        notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(
                 background = Background,
@@ -75,14 +76,23 @@ class MainActivity : ComponentActivity() {
                 onBackground = Color.White,
                 onSurface = Color.White
             )) {
-                BsmMusicApp(
-                    hasPermission = { hasAudioPermission() },
-                    requestPermission = { callback -> requestAudioPermission(callback) },
-                    loadSongs = { loadDeviceSongs() },
-                    player = playbackPlayer
-
-                )
+                val activePlayer = playbackPlayer
+                if (activePlayer != null) {
+                    BsmMusicApp(
+                        hasPermission = { hasAudioPermission() },
+                        requestPermission = { callback -> requestAudioPermission(callback) },
+                        loadSongs = { loadDeviceSongs() },
+                        player = activePlayer
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Accent)
+                    }
+                }
             }
+        }
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
