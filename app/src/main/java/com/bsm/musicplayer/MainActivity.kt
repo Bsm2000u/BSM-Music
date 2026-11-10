@@ -295,12 +295,12 @@ private fun BsmMusicApp(
     var selectedPlaylist by remember { mutableStateOf<String?>(null) }
     var showFavoritesOnly by remember { mutableStateOf(false) }
     var detailBackAnimating by remember { mutableStateOf(false) }
-    val detailExitProgress by animateFloatAsState(targetValue = if (detailBackAnimating) 1f else 0f, animationSpec = tween(170), label = "detailBack")
+    val detailExitProgress by animateFloatAsState(targetValue = if (detailBackAnimating) 1f else 0f, animationSpec = tween(240), label = "detailBack")
     var isRefreshing by remember { mutableStateOf(false) }
 
     LaunchedEffect(detailBackAnimating) {
         if (detailBackAnimating) {
-            kotlinx.coroutines.delay(170L)
+            kotlinx.coroutines.delay(240L)
             if (selectedAlbum != null) {
                 selectedAlbum = null
             } else {
@@ -862,6 +862,11 @@ private fun BsmMusicApp(
                 val detailAlbumSong = selectedAlbum?.let { albumId -> visibleSongs.firstOrNull { it.albumId == albumId } }
                 val detailArtworkSong = detailAlbumSong ?: visibleSongs.firstOrNull()
                 if (selectedArtist != null || detailAlbumSong != null) {
+                    AnimatedVisibility(
+                        visible = !detailBackAnimating,
+                        enter = fadeIn(tween(260)) + slideInHorizontally(tween(300)) { it / 8 },
+                        exit = fadeOut(tween(180)) + slideOutHorizontally(tween(220)) { it / 10 }
+                    ) {
                     val totalDuration = formatTime(visibleSongs.sumOf { it.duration })
                     val albumCount = visibleSongs.map { it.albumId }.distinct().size
                     Column(
@@ -1005,6 +1010,7 @@ private fun BsmMusicApp(
                                 }
                             }
                         }
+                    }
                     }
                 }
                 val songListState = rememberLazyListState()
