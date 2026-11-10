@@ -17,11 +17,12 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
@@ -57,6 +58,7 @@ private val SurfaceDark = Color(0xFF1A201C)
 private val Accent = Color(0xFFB8F36B)
 private val Muted = Color(0xFF929A94)
 
+@androidx.compose.runtime.Immutable
 data class Song(val id: Long, val title: String, val artist: String, val uri: Uri, val duration: Long)
 
 class MainActivity : ComponentActivity() {
@@ -199,6 +201,7 @@ private fun BsmMusicApp(
     val mediaItems = remember(songs) {
         songs.map { MediaItem.fromUri(it.uri) }
     }
+    val songIndexById = remember(songs) { songs.mapIndexed { index, song -> song.id to index }.toMap() }
     val visibleSongs = remember(songs, searchQuery, sortByArtist) {
         val filtered = if (searchQuery.isBlank()) songs else {
             songs.filter { it.title.contains(searchQuery, true) || it.artist.contains(searchQuery, true) }
@@ -314,27 +317,16 @@ private fun BsmMusicApp(
                     contentPadding = PaddingValues(bottom = 14.dp)
                 ) {
                     items(visibleSongs, key = { it.id }, contentType = { "song-row" }) { song ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .background(SurfaceDark, RoundedCornerShape(16.dp))
-                                .clickable {
-                                    currentSong = song
-                                    player.seekTo(songs.indexOf(song).coerceAtLeast(0), 0L)
-                                    if (player.playbackState == Player.STATE_IDLE) player.prepare()
-                                    player.play()
-                                    showPlayer = true
-                                }.padding(13.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(Modifier.size(46.dp).background(Color(0xFF29352A), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.MusicNote, null, tint = Accent)
+                        SongRow(
+                            song = song,
+                            onClick = {
+                                currentSong = song
+                                player.seekTo(songIndexById[song.id] ?: 0, 0L)
+                                if (player.playbackState == Player.STATE_IDLE) player.prepare()
+                                player.play()
+                                showPlayer = true
                             }
-                            Column(Modifier.weight(1f).padding(start = 13.dp)) {
-                                Text(song.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                                Text(song.artist, color = Muted, fontSize = 12.sp, maxLines = 1)
-                            }
-                            Text(formatTime(song.duration), color = Muted, fontSize = 11.sp)
-                        }
+                        )
                     }
                 }
             }
@@ -368,6 +360,31 @@ private fun BsmMusicApp(
                 onNext = { player.seekToNextMediaItem() }
             )
         }
+    }
+}
+
+
+@Composable
+private fun SongRow(song: Song, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceDark)
+            .clickable(onClick = onClick)
+            .padding(13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(46.dp).background(Color(0xFF29352A), RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.MusicNote, null, tint = Accent)
+        }
+        Column(Modifier.weight(1f).padding(start = 13.dp)) {
+            Text(song.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(song.artist, color = Muted, fontSize = 12.sp, maxLines = 1)
+        }
+        Text(formatTime(song.duration), color = Muted, fontSize = 11.sp)
     }
 }
 
