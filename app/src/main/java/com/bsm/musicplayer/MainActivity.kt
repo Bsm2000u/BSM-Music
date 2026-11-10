@@ -515,7 +515,7 @@ private fun BsmMusicApp(
                             change.consume()
                         },
                         onDragEnd = {
-                            val sections = listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP")
+                            val sections = listOf("SONGS", "ARTISTS", "PLAYLIST", "ALBUMS", "RECENT")
                             val current = sections.indexOf(librarySection).coerceAtLeast(0)
                             if (horizontalTravel < -65f && current < sections.lastIndex) {
                                 librarySection = sections[current + 1]
@@ -565,7 +565,7 @@ private fun BsmMusicApp(
                 }
             }
             OutlinedTextField(
-                value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth().height(48.dp),
+                value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth().height(56.dp),
                 singleLine = true, shape = RoundedCornerShape(16.dp),
                 placeholder = { Text("Search songs or artists", color = Muted, fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent) },
@@ -579,74 +579,6 @@ private fun BsmMusicApp(
                 },
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Accent, unfocusedBorderColor = SurfaceDark, focusedContainerColor = SurfaceDark, unfocusedContainerColor = SurfaceDark, focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Accent)
             )
-            Spacer(Modifier.height(7.dp))
-            Box(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(23.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF67283B), Color(0xFF351B2A), SurfaceDark)))
-                    .padding(horizontal = 13.dp, vertical = 10.dp)
-            ) {
-                Box(
-                    Modifier.align(Alignment.TopEnd).offset(x = 27.dp, y = (-34).dp)
-                        .size(122.dp).background(Accent.copy(alpha = 0.10f), CircleShape)
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.MusicNote, null, tint = Color(0xFFFFA0AC), modifier = Modifier.size(13.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("YOUR COLLECTION", color = Color.White.copy(alpha = 0.88f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.25.sp)
-                        }
-                        Spacer(Modifier.height(5.dp))
-                        Text("${songs.size}", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black, lineHeight = 27.sp)
-                        Text("TRACKS READY TO PLAY", color = Color.White.copy(alpha = 0.68f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
-                        Spacer(Modifier.height(7.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Row(
-                                Modifier.clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha = 0.20f))
-                                    .padding(horizontal = 8.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Person, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(11.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("${songs.map { it.artist }.distinct().size} artists", color = Color.White.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                            Row(
-                                Modifier.clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha = 0.20f))
-                                    .padding(horizontal = 8.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Album, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(11.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("${songs.map { it.albumId }.distinct().size} albums", color = Color.White.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            Modifier.size(54.dp).background(
-                                Brush.linearGradient(listOf(Color(0xFFFFA0AC), Accent, Color(0xFFCF1835))),
-                                CircleShape
-                            ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            IconButton(onClick = {
-                                if (songs.isNotEmpty()) {
-                                    currentSong = songs.first()
-                                    player.shuffleModeEnabled = false
-                                    player.seekTo(0, 0L)
-                                    if (player.playbackState == Player.STATE_IDLE) player.prepare()
-                                    player.play()
-                                    showPlayer = true
-                                }
-                            }, enabled = songs.isNotEmpty()) {
-                                Icon(Icons.Default.PlayArrow, null, tint = Background, modifier = Modifier.size(30.dp))
-                            }
-                        }
-                        Spacer(Modifier.height(5.dp))
-                        Text("PLAY ALL", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
-                    }
-                }
-            }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(selectedArtist ?: (selectedAlbum?.let { id -> songs.firstOrNull { it.albumId == id }?.album } ?: "YOUR LIBRARY"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, maxLines = 1)
@@ -654,8 +586,8 @@ private fun BsmMusicApp(
                         when (librarySection) {
                             "ARTISTS" -> "${visibleSongs.map { it.artist }.distinct().size} ARTISTS"
                             "ALBUMS" -> "${visibleSongs.map { it.albumId }.distinct().size} ALBUMS"
+                            "PLAYLIST" -> "${playlistNames.size} PLAYLISTS"
                             "RECENT" -> "${visibleSongs.size} RECENT TRACKS"
-                            "TOP" -> "${visibleSongs.size} MOST PLAYED TRACKS"
                             else -> "${visibleSongs.size} SONGS"
                         },
                         color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp
@@ -706,34 +638,6 @@ private fun BsmMusicApp(
                         borderColor = SurfaceRaised, selectedBorderColor = Accent
                     )
                 )
-            }
-            Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("PLAYLISTS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
-                if (playlistNames.isNotEmpty()) {
-                    TextButton(onClick = { showManagePlaylists = true }) {
-                        Text("MANAGE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                TextButton(onClick = { newPlaylistName = ""; showCreatePlaylist = true }) {
-                    Icon(Icons.Default.PlaylistAdd, null, tint = Accent, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("NEW", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            if (playlistNames.isNotEmpty()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(bottom = 5.dp).horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    FilterChip(selected = selectedPlaylist == null, onClick = { selectedPlaylist = null }, label = { Text("ALL", fontSize = 10.sp) })
-                    playlistNames.forEach { name ->
-                        FilterChip(
-                            selected = selectedPlaylist == name,
-                            onClick = { selectedPlaylist = if (selectedPlaylist == name) null else name; showFavoritesOnly = false },
-                            label = { Text("$name · ${playlistSongCounts[name] ?: 0}", fontSize = 10.sp, maxLines = 1) }
-                        )
-                    }
-                }
             }
             AnimatedContent(
                 targetState = librarySection,
@@ -812,6 +716,78 @@ private fun BsmMusicApp(
                                 colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background)
                             ) {
                                 Text("BROWSE LIBRARY", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+                    }
+                }
+            } else if (animatedSection == "PLAYLIST") {
+                Column(Modifier.fillMaxWidth().weight(1f)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("YOUR PLAYLISTS", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("${playlistNames.size} PLAYLISTS", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                        if (playlistNames.isNotEmpty()) {
+                            TextButton(onClick = { showManagePlaylists = true }) {
+                                Text("MANAGE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        TextButton(onClick = { newPlaylistName = ""; songForPlaylist = null; showCreatePlaylist = true }) {
+                            Icon(Icons.Default.PlaylistAdd, null, tint = Accent, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("NEW", color = Accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    if (playlistNames.isEmpty()) {
+                        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.PlaylistAdd, null, tint = Accent, modifier = Modifier.size(48.dp))
+                                Spacer(Modifier.height(10.dp))
+                                Text("No playlists yet", color = Color.White, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(5.dp))
+                                Text("Create a playlist to organize your music.", color = Muted, fontSize = 12.sp)
+                                Spacer(Modifier.height(12.dp))
+                                Button(
+                                    onClick = { newPlaylistName = ""; songForPlaylist = null; showCreatePlaylist = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Background)
+                                ) { Text("CREATE PLAYLIST", fontWeight = FontWeight.ExtraBold) }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(bottom = 12.dp)
+                        ) {
+                            items(playlistNames) { name ->
+                                Row(
+                                    Modifier.fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(SurfaceDark)
+                                        .clickable {
+                                            selectedPlaylist = name
+                                            showFavoritesOnly = false
+                                            librarySection = "SONGS"
+                                        }
+                                        .padding(horizontal = 13.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        Modifier.size(44.dp).clip(RoundedCornerShape(13.dp))
+                                            .background(AccentDeep),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.QueueMusic, null, tint = Accent, modifier = Modifier.size(23.dp))
+                                    }
+                                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                        Text(name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                        Text("${playlistSongCounts[name] ?: 0} TRACKS", color = Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp)
+                                    }
+                                    Icon(Icons.Default.PlayArrow, null, tint = Accent, modifier = Modifier.size(23.dp))
+                                }
                             }
                         }
                     }
@@ -1119,14 +1095,14 @@ private fun BsmMusicApp(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP").forEach { section ->
+                listOf("SONGS", "ARTISTS", "PLAYLIST", "ALBUMS", "RECENT").forEach { section ->
                     val selected = librarySection == section
                     val tabIcon = when (section) {
                         "SONGS" -> Icons.Default.MusicNote
                         "ARTISTS" -> Icons.Default.Person
+                        "PLAYLIST" -> Icons.Default.PlaylistAdd
                         "ALBUMS" -> Icons.Default.Album
-                        "RECENT" -> Icons.Default.QueueMusic
-                        else -> Icons.Default.PlayArrow
+                        else -> Icons.Default.QueueMusic
                     }
                     Column(
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(13.dp))
