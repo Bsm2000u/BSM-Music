@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -433,79 +434,194 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
     var position by remember(song.id) { mutableFloatStateOf(0f) }
     var duration by remember(song.id) { mutableFloatStateOf(song.duration.toFloat().coerceAtLeast(1f)) }
     var playing by remember { mutableStateOf(player.isPlaying) }
+    var isSeeking by remember { mutableStateOf(false) }
 
-    LaunchedEffect(song.id) {
+    LaunchedEffect(song.id, player) {
         while (true) {
-            position = player.currentPosition.toFloat()
-            duration = player.duration.takeIf { it > 0 }?.toFloat() ?: song.duration.toFloat().coerceAtLeast(1f)
+            if (!isSeeking) position = player.currentPosition.toFloat()
+            duration = player.duration.takeIf { it > 0 }?.toFloat()
+                ?: song.duration.toFloat().coerceAtLeast(1f)
             playing = player.isPlaying
-            kotlinx.coroutines.delay(500)
+            kotlinx.coroutines.delay(350)
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(Background.copy(alpha = 0.98f))
-            .statusBarsPadding().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    val repeatLabel = when (player.repeatMode) {
+        Player.REPEAT_MODE_ONE -> "Repeat one"
+        Player.REPEAT_MODE_ALL -> "Repeat all"
+        else -> "Repeat off"
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF241016), Background, Background)))
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-            TextButton(onClick = onClose) { Text("CLOSE", color = Accent, fontWeight = FontWeight.Bold) }
-        }
-        Spacer(Modifier.weight(1f))
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).background(AccentDeep, RoundedCornerShape(30.dp)), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(110.dp))
-        }
-        Spacer(Modifier.height(34.dp))
-        Text(song.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        Spacer(Modifier.height(7.dp))
-        Text(song.artist, color = Muted, fontSize = 15.sp)
-        Spacer(Modifier.height(28.dp))
-        Slider(
-            value = position.coerceIn(0f, duration),
-            onValueChange = { position = it },
-            onValueChangeFinished = { player.seekTo(position.toLong()) },
-            valueRange = 0f..duration.coerceAtLeast(1f),
-            colors = SliderDefaults.colors(thumbColor = Accent, activeTrackColor = Accent)
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(formatTime(position.toLong()), color = Muted, fontSize = 11.sp)
-            Text(formatTime(duration.toLong()), color = Muted, fontSize = 11.sp)
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { player.shuffleModeEnabled = !player.shuffleModeEnabled }) {
-                Icon(Icons.Default.Shuffle, contentDescription = "Shuffle", tint = if (player.shuffleModeEnabled) Accent else Muted)
-            }
-            IconButton(onClick = {
-                player.repeatMode = when (player.repeatMode) {
-                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                    else -> Player.REPEAT_MODE_OFF
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(42.dp).background(SurfaceDark, CircleShape)
+                ) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Minimize player", tint = Color.White)
                 }
-            }) {
-                Icon(
-                    if (player.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                    contentDescription = "Repeat",
-                    tint = if (player.repeatMode == Player.REPEAT_MODE_OFF) Muted else Accent
+                Spacer(Modifier.weight(1f))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("NOW PLAYING", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                    Text("FROM YOUR LIBRARY", color = Muted, fontSize = 9.sp, letterSpacing = 1.2.sp)
+                }
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.size(42.dp))
+            }
+
+            Spacer(Modifier.weight(0.65f))
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                    .aspectRatio(1f)
+                    .background(
+                        Brush.linearGradient(listOf(Color(0xFF4A1421), AccentDeep, SurfaceRaised)),
+                        RoundedCornerShape(30.dp)
+                    )
+                    .padding(13.dp)
+                    .background(Color.White.copy(alpha = 0.035f), RoundedCornerShape(23.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    Modifier.fillMaxSize().padding(17.dp)
+                        .background(Color.White.copy(alpha = 0.025f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.MusicNote,
+                        contentDescription = "Album artwork",
+                        tint = Accent,
+                        modifier = Modifier.size(94.dp)
+                    )
+                }
+                Text(
+                    "BSM",
+                    color = Color.White.copy(alpha = 0.28f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 3.sp,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp)
                 )
             }
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            IconButton(onClick = onPrevious, modifier = Modifier.size(58.dp)) {
-                Icon(Icons.Default.SkipPrevious, null, tint = Color.White, modifier = Modifier.size(34.dp))
+
+            Spacer(Modifier.height(30.dp))
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    song.title,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1
+                )
+                Spacer(Modifier.height(7.dp))
+                Text(song.artist, color = Muted, fontSize = 14.sp, maxLines = 1)
             }
-            IconButton(
-                onClick = { if (player.isPlaying) player.pause() else player.play(); playing = player.isPlaying },
-                modifier = Modifier.size(76.dp).background(Accent, CircleShape)
+
+            Spacer(Modifier.height(24.dp))
+            Slider(
+                value = position.coerceIn(0f, duration.coerceAtLeast(1f)),
+                onValueChange = {
+                    isSeeking = true
+                    position = it
+                },
+                onValueChangeFinished = {
+                    player.seekTo(position.toLong())
+                    isSeeking = false
+                },
+                valueRange = 0f..duration.coerceAtLeast(1f),
+                colors = SliderDefaults.colors(
+                    thumbColor = Accent,
+                    activeTrackColor = Accent,
+                    inactiveTrackColor = Color.White.copy(alpha = 0.14f)
+                )
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(formatTime(position.toLong()), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text(formatTime(duration.toLong()), color = Muted, fontSize = 11.sp)
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Background, modifier = Modifier.size(42.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { player.shuffleModeEnabled = !player.shuffleModeEnabled }) {
+                        Icon(
+                            Icons.Default.Shuffle,
+                            contentDescription = "Toggle shuffle",
+                            tint = if (player.shuffleModeEnabled) Accent else Muted
+                        )
+                    }
+                    Text("SHUFFLE", color = if (player.shuffleModeEnabled) Accent else Muted, fontSize = 8.sp, letterSpacing = 1.sp)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onPrevious, modifier = Modifier.size(54.dp)) {
+                        Icon(Icons.Default.SkipPrevious, contentDescription = "Previous track", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    IconButton(
+                        onClick = {
+                            if (player.isPlaying) player.pause() else player.play()
+                            playing = player.isPlaying
+                        },
+                        modifier = Modifier.size(72.dp).background(
+                            Brush.linearGradient(listOf(Color(0xFFFF5365), Accent)),
+                            CircleShape
+                        )
+                    ) {
+                        Icon(
+                            if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (playing) "Pause" else "Play",
+                            tint = Background,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    IconButton(onClick = onNext, modifier = Modifier.size(54.dp)) {
+                        Icon(Icons.Default.SkipNext, contentDescription = "Next track", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = {
+                        player.repeatMode = when (player.repeatMode) {
+                            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                            else -> Player.REPEAT_MODE_OFF
+                        }
+                    }) {
+                        Icon(
+                            if (player.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                            contentDescription = repeatLabel,
+                            tint = if (player.repeatMode == Player.REPEAT_MODE_OFF) Muted else Accent
+                        )
+                    }
+                    Text(
+                        when (player.repeatMode) {
+                            Player.REPEAT_MODE_ONE -> "REPEAT ONE"
+                            Player.REPEAT_MODE_ALL -> "REPEAT ALL"
+                            else -> "REPEAT"
+                        },
+                        color = if (player.repeatMode == Player.REPEAT_MODE_OFF) Muted else Accent,
+                        fontSize = 8.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
             }
-            IconButton(onClick = onNext, modifier = Modifier.size(58.dp)) {
-                Icon(Icons.Default.SkipNext, null, tint = Color.White, modifier = Modifier.size(34.dp))
-            }
+            Spacer(Modifier.weight(0.8f))
         }
-        Spacer(Modifier.weight(1f))
     }
 }
 
