@@ -130,6 +130,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        val token = SessionToken(this, ComponentName(this, MusicPlaybackService::class.java))
+        val future = MediaController.Builder(this, token).buildAsync()
+        controllerFuture = future
+        future.addListener({
+            try {
+                controller = future.get()
+                playbackPlayer = controller
+            } catch (_: Exception) {
+                controller = null
+                playbackPlayer = null
+            }
+        }, ContextCompat.getMainExecutor(this))
+
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -181,26 +194,20 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        val token = SessionToken(this, ComponentName(this, MusicPlaybackService::class.java))
-        val future = MediaController.Builder(this, token).buildAsync()
-        controllerFuture = future
-        future.addListener({
-            try {
-                controller = future.get()
-                playbackPlayer = controller
-            } catch (_: Exception) {
-                controller = null
-                playbackPlayer = null
-            }
-        }, ContextCompat.getMainExecutor(this))
+        // Keep the MediaController connected while the activity is in the background.
+        // Releasing it in onStop can disconnect playback when the user returns.
     }
 
     override fun onStop() {
+        super.onStop()
+    }
+
+    override fun onDestroy() {
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         controller = null
         playbackPlayer = null
-        super.onStop()
+        super.onDestroy()
     }
 }
 
@@ -406,8 +413,7 @@ private fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth()
             .height(72.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceDark)
+            .background(SurfaceDark, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(13.dp),
         verticalAlignment = Alignment.CenterVertically
