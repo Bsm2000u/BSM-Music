@@ -1,6 +1,7 @@
 package com.bsm.musicplayer
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.ContentUris
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -40,7 +41,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
 
 private val Background = Color(0xFF101311)
 private val SurfaceDark = Color(0xFF1A201C)
@@ -50,7 +54,9 @@ private val Muted = Color(0xFF929A94)
 data class Song(val id: Long, val title: String, val artist: String, val uri: Uri, val duration: Long)
 
 class MainActivity : ComponentActivity() {
-    private var player: ExoPlayer? = null
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+    private var controller: MediaController? = null
+    private var playbackPlayer by mutableStateOf<MediaController?>(null)
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
     private var permissionCallback: ((Boolean) -> Unit)? = null
 
@@ -61,7 +67,6 @@ class MainActivity : ComponentActivity() {
             permissionCallback?.invoke(granted)
             permissionCallback = null
         }
-        player = ExoPlayer.Builder(this).build()
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(
                 background = Background,
@@ -74,7 +79,8 @@ class MainActivity : ComponentActivity() {
                     hasPermission = { hasAudioPermission() },
                     requestPermission = { callback -> requestAudioPermission(callback) },
                     loadSongs = { loadDeviceSongs() },
-                    player = player!!
+                    player = playbackPlayer
+
                 )
             }
         }
@@ -124,10 +130,28 @@ class MainActivity : ComponentActivity() {
         return songs
     }
 
-    override fun onDestroy() {
-        player?.release()
-        player = null
-        super.onDestroy()
+    override fun onStart() {
+        super.onStart()
+        val token = SessionToken(this, ComponentName(this, MusicPlaybackService::class.java))
+        val future = MediaController.Builder(this, token).buildAsync()
+        controllerFuture = future
+        future.addListener({
+            try {
+                controller = future.get()
+                playbackPlayer = controller
+            } catch (_: Exception) {
+                controller = null
+                playbackPlayer = null
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    override fun onStop() {
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        controllerFuture = null
+        controller = null
+        playbackPlayer = null
+        super.onStop()
     }
 }
 
@@ -136,7 +160,7 @@ private fun BsmMusicApp(
     hasPermission: () -> Boolean,
     requestPermission: ((Boolean) -> Unit) -> Unit,
     loadSongs: () -> List<Song>,
-    player: ExoPlayer
+    player: Player
 ) {
     var permissionGranted by remember { mutableStateOf(hasPermission()) }
     var songs by remember { mutableStateOf(emptyList<Song>()) }
@@ -225,7 +249,8 @@ private fun BsmMusicApp(
                                 .background(SurfaceDark, RoundedCornerShape(16.dp))
                                 .clickable {
                                     currentSong = song
-                                    player.setMediaItem(MediaItem.fromUri(song.uri))
+                                    player.setMediaItems(songs.map { MediaItem.fromUri(it.uri) })
+                                    player.seekTo(songs.indexOf(song).coerceAtLeast(0), 0L)
                                     player.prepare()
                                     player.play()
                                     showPlayer = true
@@ -274,14 +299,14 @@ private fun BsmMusicApp(
                     val index = songs.indexOf(currentSong)
                     if (index > 0) {
                         currentSong = songs[index - 1]
-                        player.setMediaItem(MediaItem.fromUri(currentSong!!.uri)); player.prepare(); player.play()
+                        player.seekToPreviousMediaItem()
                     }
                 },
                 onNext = {
                     val index = songs.indexOf(currentSong)
                     if (index < songs.lastIndex) {
                         currentSong = songs[index + 1]
-                        player.setMediaItem(MediaItem.fromUri(currentSong!!.uri)); player.prepare(); player.play()
+                        player.seekToNextMediaItem()
                     }
                 }
             )
@@ -290,7 +315,7 @@ private fun BsmMusicApp(
 }
 
 @Composable
-private fun PlayerScreen(song: Song, player: ExoPlayer, onClose: () -> Unit, onPrevious: () -> Unit, onNext: () -> Unit) {
+private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrevious: () -> Unit, onNext: () -> Unit) {
     var position by remember(song.id) { mutableFloatStateOf(0f) }
     var duration by remember(song.id) { mutableFloatStateOf(song.duration.toFloat().coerceAtLeast(1f)) }
     var playing by remember { mutableStateOf(player.isPlaying) }
