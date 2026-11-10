@@ -533,7 +533,7 @@ private fun BsmMusicApp(
                 }
         ) {
             Row(
-                Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 9.dp),
+                Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -565,7 +565,7 @@ private fun BsmMusicApp(
                 }
             }
             OutlinedTextField(
-                value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                value = searchQuery, onValueChange = { searchQuery = it }, modifier = Modifier.fillMaxWidth().height(48.dp),
                 singleLine = true, shape = RoundedCornerShape(16.dp),
                 placeholder = { Text("Search songs or artists", color = Muted, fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent) },
@@ -583,7 +583,7 @@ private fun BsmMusicApp(
             Box(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(23.dp))
                     .background(Brush.linearGradient(listOf(Color(0xFF67283B), Color(0xFF351B2A), SurfaceDark)))
-                    .padding(horizontal = 15.dp, vertical = 14.dp)
+                    .padding(horizontal = 13.dp, vertical = 10.dp)
             ) {
                 Box(
                     Modifier.align(Alignment.TopEnd).offset(x = 27.dp, y = (-34).dp)
@@ -596,10 +596,10 @@ private fun BsmMusicApp(
                             Spacer(Modifier.width(6.dp))
                             Text("YOUR COLLECTION", color = Color.White.copy(alpha = 0.88f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.25.sp)
                         }
-                        Spacer(Modifier.height(7.dp))
-                        Text("${songs.size}", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Black, lineHeight = 31.sp)
+                        Spacer(Modifier.height(5.dp))
+                        Text("${songs.size}", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black, lineHeight = 27.sp)
                         Text("TRACKS READY TO PLAY", color = Color.White.copy(alpha = 0.68f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(7.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                             Row(
                                 Modifier.clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha = 0.20f))
@@ -706,51 +706,6 @@ private fun BsmMusicApp(
                         borderColor = SurfaceRaised, selectedBorderColor = Accent
                     )
                 )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
-                    .background(SurfaceDark, RoundedCornerShape(16.dp)).padding(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP").forEach { section ->
-                    val selected = librarySection == section
-                    val tabIcon = when (section) {
-                        "SONGS" -> Icons.Default.MusicNote
-                        "ARTISTS" -> Icons.Default.Person
-                        "ALBUMS" -> Icons.Default.Album
-                        "RECENT" -> Icons.Default.QueueMusic
-                        else -> Icons.Default.PlayArrow
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(13.dp))
-                            .background(if (selected) AccentDeep else Color.Transparent)
-                            .clickable {
-                                librarySection = section
-                                selectedArtist = null
-                                selectedAlbum = null
-                            }
-                            .padding(vertical = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            tabIcon,
-                            contentDescription = section,
-                            tint = if (selected) Accent else Muted,
-                            modifier = Modifier.size(17.dp)
-                        )
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            section,
-                            color = if (selected) Color.White else Muted,
-                            fontSize = 8.sp,
-                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            letterSpacing = 0.25.sp,
-                            maxLines = 1
-                        )
-                    }
-                }
             }
             Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("PLAYLISTS", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
@@ -1154,6 +1109,51 @@ private fun BsmMusicApp(
                         Box(
                             Modifier.fillMaxWidth(miniProgress).height(2.dp)
                                 .background(Brush.horizontalGradient(listOf(AccentDeep, Accent)))
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 3.dp)
+                    .background(SurfaceDark, RoundedCornerShape(16.dp)).padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf("SONGS", "ARTISTS", "ALBUMS", "RECENT", "TOP").forEach { section ->
+                    val selected = librarySection == section
+                    val tabIcon = when (section) {
+                        "SONGS" -> Icons.Default.MusicNote
+                        "ARTISTS" -> Icons.Default.Person
+                        "ALBUMS" -> Icons.Default.Album
+                        "RECENT" -> Icons.Default.QueueMusic
+                        else -> Icons.Default.PlayArrow
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(13.dp))
+                            .background(if (selected) AccentDeep else Color.Transparent)
+                            .clickable {
+                                librarySection = section
+                                selectedArtist = null
+                                selectedAlbum = null
+                            }
+                            .padding(vertical = 5.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            tabIcon,
+                            contentDescription = section,
+                            tint = if (selected) Accent else Muted,
+                            modifier = Modifier.size(17.dp)
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            section,
+                            color = if (selected) Color.White else Muted,
+                            fontSize = 8.sp,
+                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            letterSpacing = 0.25.sp,
+                            maxLines = 1
                         )
                     }
                 }
