@@ -1393,31 +1393,45 @@ private fun PlayerScreen(
 
 @Composable
 private fun PlaybackVisualizer(isPlaying: Boolean) {
-    val transition = rememberInfiniteTransition(label = "playback_visualizer")
-    val levels = listOf(
-        transition.animateFloat(0.18f, 0.95f, infiniteRepeatable(tween(520, delayMillis = 0), RepeatMode.Reverse), label = "bar_1").value,
-        transition.animateFloat(0.25f, 0.82f, infiniteRepeatable(tween(680, delayMillis = 90), RepeatMode.Reverse), label = "bar_2").value,
-        transition.animateFloat(0.12f, 1.00f, infiniteRepeatable(tween(460, delayMillis = 160), RepeatMode.Reverse), label = "bar_3").value,
-        transition.animateFloat(0.30f, 0.88f, infiniteRepeatable(tween(610, delayMillis = 50), RepeatMode.Reverse), label = "bar_4").value,
-        transition.animateFloat(0.16f, 0.96f, infiniteRepeatable(tween(560, delayMillis = 210), RepeatMode.Reverse), label = "bar_5").value,
-        transition.animateFloat(0.22f, 0.78f, infiniteRepeatable(tween(730, delayMillis = 130), RepeatMode.Reverse), label = "bar_6").value,
-        transition.animateFloat(0.14f, 0.90f, infiniteRepeatable(tween(490, delayMillis = 260), RepeatMode.Reverse), label = "bar_7").value
-    )
-    Row(
-        modifier = Modifier.height(25.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.Bottom
-    ) {
-        levels.forEach { level ->
-            Box(
-                Modifier
-                    .width(3.dp)
-                    .height((if (isPlaying) 6f + 18f * level else 5f).dp)
-                    .background(
-                        if (isPlaying) Accent else Muted.copy(alpha = 0.55f),
-                        CircleShape
-                    )
-            )
+    if (isPlaying) {
+        val transition = rememberInfiniteTransition(label = "playback_visualizer")
+        val levels = listOf(
+            transition.animateFloat(0.18f, 0.95f, infiniteRepeatable(tween(520), RepeatMode.Reverse), label = "bar_1").value,
+            transition.animateFloat(0.25f, 0.82f, infiniteRepeatable(tween(680, delayMillis = 90), RepeatMode.Reverse), label = "bar_2").value,
+            transition.animateFloat(0.12f, 1.00f, infiniteRepeatable(tween(460, delayMillis = 160), RepeatMode.Reverse), label = "bar_3").value,
+            transition.animateFloat(0.30f, 0.88f, infiniteRepeatable(tween(610, delayMillis = 50), RepeatMode.Reverse), label = "bar_4").value,
+            transition.animateFloat(0.16f, 0.96f, infiniteRepeatable(tween(560, delayMillis = 210), RepeatMode.Reverse), label = "bar_5").value,
+            transition.animateFloat(0.22f, 0.78f, infiniteRepeatable(tween(730, delayMillis = 130), RepeatMode.Reverse), label = "bar_6").value,
+            transition.animateFloat(0.14f, 0.90f, infiniteRepeatable(tween(490, delayMillis = 260), RepeatMode.Reverse), label = "bar_7").value
+        )
+        Row(
+            modifier = Modifier.height(25.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            levels.forEach { level ->
+                Box(
+                    Modifier
+                        .width(3.dp)
+                        .height((6f + 18f * level).dp)
+                        .background(Accent, CircleShape)
+                )
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.height(25.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            repeat(7) {
+                Box(
+                    Modifier
+                        .width(3.dp)
+                        .height(5.dp)
+                        .background(Muted.copy(alpha = 0.55f), CircleShape)
+                )
+            }
         }
     }
 }
