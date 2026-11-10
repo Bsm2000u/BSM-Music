@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Queue
@@ -1177,36 +1178,52 @@ private fun SongRow(
     onAddToQueueEnd: () -> Unit
 ) {
     val onClick = remember(song, onSongClick) { { onSongClick(song) } }
+    var showActions by remember(song.id) { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth()
-            .height(72.dp)
-            .background(SurfaceDark, RoundedCornerShape(16.dp))
+            .height(78.dp)
+            .background(SurfaceDark, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
-            .padding(start = 13.dp, end = 7.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = 10.dp, end = 5.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AlbumArtwork(song, Modifier.size(46.dp))
-        Column(Modifier.weight(1f).padding(start = 13.dp)) {
-            Text(song.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text(song.artist, color = Muted, fontSize = 12.sp, maxLines = 1)
+        AlbumArtwork(song, Modifier.size(54.dp))
+        Column(Modifier.weight(1f).padding(start = 12.dp, end = 7.dp)) {
+            Text(song.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+            Spacer(Modifier.height(3.dp))
+            Text(song.artist, color = Muted, fontSize = 11.sp, maxLines = 1)
+            Spacer(Modifier.height(4.dp))
+            Text(formatTime(song.duration), color = Accent.copy(alpha = 0.9f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
         }
-        Text(formatTime(song.duration), color = Muted, fontSize = 11.sp)
-        IconButton(onClick = onAddToQueue, modifier = Modifier.size(38.dp)) {
-            Icon(Icons.Default.QueueMusic, contentDescription = "Play next", tint = Muted, modifier = Modifier.size(19.dp))
-        }
-        IconButton(onClick = onAddToQueueEnd, modifier = Modifier.size(38.dp)) {
-            Icon(Icons.Default.Queue, contentDescription = "Add to queue", tint = Muted, modifier = Modifier.size(19.dp))
-        }
-        IconButton(onClick = onAddToPlaylist, modifier = Modifier.size(38.dp)) {
-            Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to playlist", tint = Muted, modifier = Modifier.size(19.dp))
-        }
-        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(42.dp)) {
+        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(38.dp)) {
             Icon(
                 if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                 tint = if (isFavorite) Accent else Muted,
                 modifier = Modifier.size(19.dp)
             )
+        }
+        Box {
+            IconButton(onClick = { showActions = true }, modifier = Modifier.size(38.dp)) {
+                Icon(Icons.Default.MoreVert, contentDescription = "Song actions", tint = Muted, modifier = Modifier.size(21.dp))
+            }
+            DropdownMenu(expanded = showActions, onDismissRequest = { showActions = false }) {
+                DropdownMenuItem(
+                    text = { Text("Play next") },
+                    leadingIcon = { Icon(Icons.Default.QueueMusic, null) },
+                    onClick = { showActions = false; onAddToQueue() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Add to queue") },
+                    leadingIcon = { Icon(Icons.Default.Queue, null) },
+                    onClick = { showActions = false; onAddToQueueEnd() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Add to playlist") },
+                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, null) },
+                    onClick = { showActions = false; onAddToPlaylist() }
+                )
+            }
         }
     }
 }
