@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -961,12 +962,7 @@ private fun SongRow(
             .padding(start = 13.dp, end = 7.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier.size(46.dp).background(AccentDeep, RoundedCornerShape(14.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.MusicNote, null, tint = Accent)
-        }
+        AlbumArtwork(song, Modifier.size(46.dp))
         Column(Modifier.weight(1f).padding(start = 13.dp)) {
             Text(song.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1)
             Text(song.artist, color = Muted, fontSize = 12.sp, maxLines = 1)
@@ -1058,18 +1054,7 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                     .background(Color.White.copy(alpha = 0.035f), RoundedCornerShape(23.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    Modifier.fillMaxSize().padding(17.dp)
-                        .background(Color.White.copy(alpha = 0.025f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.MusicNote,
-                        contentDescription = "Album artwork",
-                        tint = Accent,
-                        modifier = Modifier.size(94.dp)
-                    )
-                }
+                AlbumArtwork(song, Modifier.fillMaxSize().padding(17.dp).clip(CircleShape))
                 Text(
                     "BSM",
                     color = Color.White.copy(alpha = 0.28f),
@@ -1091,6 +1076,7 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                 )
                 Spacer(Modifier.height(7.dp))
                 Text(song.artist, color = Muted, fontSize = 14.sp, maxLines = 1)
+                Text(song.album, color = Muted.copy(alpha = 0.75f), fontSize = 11.sp, maxLines = 1)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -1186,6 +1172,41 @@ private fun PlayerScreen(song: Song, player: Player, onClose: () -> Unit, onPrev
                 }
             }
             Spacer(Modifier.weight(0.8f))
+        }
+    }
+}
+
+@Composable
+private fun AlbumArtwork(song: Song, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var bitmap by remember(song.albumId) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(song.albumId) {
+        bitmap = if (song.albumId > 0L) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val artworkUri = ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI, song.albumId)
+                    context.contentResolver.openInputStream(artworkUri)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)
+                    }
+                }.getOrNull()
+            }
+        } else null
+    }
+    Box(
+        modifier = modifier.clip(RoundedCornerShape(14.dp))
+            .background(Brush.linearGradient(listOf(AccentDeep, SurfaceRaised))),
+        contentAlignment = Alignment.Center
+    ) {
+        val art = bitmap
+        if (art != null) {
+            Image(
+                bitmap = art.asImageBitmap(),
+                contentDescription = "Album artwork for ${song.album}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Icon(Icons.Default.MusicNote, contentDescription = "No album artwork", tint = Accent, modifier = Modifier.size(25.dp))
         }
     }
 }
